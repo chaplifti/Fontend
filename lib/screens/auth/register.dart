@@ -1,7 +1,13 @@
+// ignore_for_file: use_build_context_synchronously, avoid_print
+
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:rc_fl_gopoolar/constants/key.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:lottie/lottie.dart';
+import 'package:http/http.dart' as http;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,6 +17,61 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _mobileNumberController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    // Dispose controllers when the widget is disposed
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _mobileNumberController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> register(String firstName, String lastName, String email,
+      String phoneNumber, String password, BuildContext context) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+            '$apiUrl/api/register'), // Adjusted to the registration endpoint
+        body: {
+          'first_name': _firstNameController.text,
+          'last_name': _lastNameController.text,
+          'email': _emailController.text,
+          'phone_number': _mobileNumberController.text,
+          'password': _passwordController.text,
+          'password_confirmation': _passwordController.text,
+        },
+      );
+      print(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Assuming that 200 or 201 status code means registration success
+        final responseData = jsonDecode(response.body);
+
+        // You might want to print the response or handle it as per your requirement
+        print(responseData);
+
+        // After successful registration, you might want to navigate the user
+        // to a login page, or directly log them in, depending on your flow
+        Navigator.pushNamed(context, '/login'); // Example: Navigate to login
+      } else {
+        // Handle registration error
+        _showRegistrationFailedAlert(
+            context, "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      // Handle network or other errors
+      _showRegistrationFailedAlert(context, "An error occurred: $error");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -30,7 +91,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 heightSpace,
                 heightSpace,
                 heightSpace,
-                nameField(),
+                firstNameField(),
+                heightSpace,
+                heightSpace,
+                lastNameField(),
                 heightSpace,
                 heightSpace,
                 emailField(),
@@ -39,6 +103,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mobileNumberField(),
                 heightSpace,
                 heightSpace,
+                passwordField(),
                 heightSpace,
                 heightSpace,
                 registerButton(),
@@ -53,7 +118,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   registerButton() {
     return InkWell(
       onTap: () {
-        Navigator.pushNamed(context, '/otp');
+        register(
+          _firstNameController.text,
+          _lastNameController.text,
+          _emailController.text,
+          _mobileNumberController.text,
+          _passwordController.text,
+          context,
+        );
+        print(_passwordController.text);
+        // FirebaseAuthenticationService.registerUser(_mobileNumberController.text,
+        //     context: context);
+        // Navigator.pushNamed(context, '/otp');
       },
       child: Container(
         width: double.maxFinite,
@@ -92,13 +168,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           )
         ],
       ),
-      child: const TextField(
+      child: TextField(
+        controller: _emailController,
         cursorColor: primaryColor,
         style: semibold15Black33,
         keyboardType: TextInputType.emailAddress,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           border: InputBorder.none,
-          hintText: "Enter your email address",
+          hintText: "Enter your Email Address",
           hintStyle: semibold15Grey,
           contentPadding: EdgeInsets.symmetric(vertical: fixPadding * 1.4),
           prefixIcon: Icon(
@@ -110,7 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  nameField() {
+  firstNameField() {
     return Container(
       decoration: BoxDecoration(
         color: whiteColor,
@@ -123,13 +200,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
           )
         ],
       ),
-      child: const TextField(
+      child: TextField(
+        controller: _firstNameController,
         cursorColor: primaryColor,
         style: semibold15Black33,
         keyboardType: TextInputType.name,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           border: InputBorder.none,
-          hintText: "Enter your name",
+          hintText: "Enter your  First Name",
+          hintStyle: semibold15Grey,
+          contentPadding: EdgeInsets.symmetric(vertical: fixPadding * 1.4),
+          prefixIcon: Icon(
+            CupertinoIcons.person,
+            size: 20.0,
+          ),
+        ),
+      ),
+    );
+  }
+
+  lastNameField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: whiteColor,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: blackColor.withOpacity(0.1),
+            blurRadius: 12.0,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: TextField(
+        controller: _lastNameController,
+        cursorColor: primaryColor,
+        style: semibold15Black33,
+        keyboardType: TextInputType.name,
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          hintText: "Enter your Last Name",
           hintStyle: semibold15Grey,
           contentPadding: EdgeInsets.symmetric(vertical: fixPadding * 1.4),
           prefixIcon: Icon(
@@ -154,17 +264,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
           )
         ],
       ),
-      child: const TextField(
+      child: TextField(
+        controller: _mobileNumberController,
         cursorColor: primaryColor,
         style: semibold15Black33,
         keyboardType: TextInputType.phone,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           border: InputBorder.none,
-          hintText: "Enter your mobile number",
+          hintText: "Enter your Mobile Number",
           hintStyle: semibold15Grey,
           contentPadding: EdgeInsets.symmetric(vertical: fixPadding * 1.4),
           prefixIcon: Icon(
             CupertinoIcons.phone,
+            size: 20.0,
+          ),
+        ),
+      ),
+    );
+  }
+
+  passwordField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: whiteColor,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: blackColor.withOpacity(0.1),
+            blurRadius: 12.0,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: TextField(
+        controller: _passwordController,
+        obscureText: true,
+        cursorColor: primaryColor,
+        style: semibold15Black33,
+        keyboardType: TextInputType.emailAddress,
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          hintText: "Enter your Password",
+          hintStyle: semibold15Grey,
+          contentPadding: EdgeInsets.symmetric(vertical: fixPadding * 1.4),
+          prefixIcon: Icon(
+            CupertinoIcons.padlock,
             size: 20.0,
           ),
         ),
@@ -194,7 +338,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   headerImage(Size size) {
     return Container(
       width: double.maxFinite,
-      height: size.height * 0.4,
+      height: size.height * 0.25,
       color: primaryColor,
       alignment: Alignment.center,
       child: Stack(
@@ -225,4 +369,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+}
+
+void _showRegistrationFailedAlert(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Registration Failed'),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Dismiss the dialog
+            },
+          ),
+        ],
+      );
+    },
+  );
 }

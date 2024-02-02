@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "895226357293",
+    "project_id": "chaplifti-65288",
+    "storage_bucket": "chaplifti-65288.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:895226357293:android:b3a9ee003a428ff4bcbaa4",
+        "android_client_info": {
+          "package_name": "com.example.rc_fl_gopoolar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdhGb0MRKoyZb8GX4CmcuAvf34-v2oCxk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

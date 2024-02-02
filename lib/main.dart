@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:page_transition/page_transition.dart';
-import 'package:rc_fl_gopoolar/screens/onboarding/intro_onboarding.dart';
 import 'package:rc_fl_gopoolar/screens/screens.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Important for plugins
+  await Firebase.initializeApp(); // If using Firebase
+  await SharedPreferences.getInstance(); // Register shared_preferences
   runApp(const MyApp());
 }
 
@@ -43,7 +47,7 @@ class MyApp extends StatelessWidget {
             settings: settings);
       case '/onboarding':
         return PageTransition(
-            child: const IntroScreen(),
+            child: const OnboardingScreen(),
             type: PageTransitionType.fade,
             settings: settings);
       case '/login':

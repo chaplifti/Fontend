@@ -1,9 +1,13 @@
+// ignore_for_file: use_build_context_synchronously, avoid_print
+
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
+import 'package:rc_fl_gopoolar/screens/auth/firebase.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
@@ -110,6 +114,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         ],
       ),
     );
+  }
+
+  void verifyOTP(
+      String enteredOTP, String verificationId, BuildContext context) async {
+    try {
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+          verificationId: verificationId, smsCode: enteredOTP);
+
+      await FirebaseAuthenticationService.auth.signInWithCredential(credential);
+      Navigator.pushNamed(
+          context, '/home'); // Navigate to home after successful verification
+    } catch (e) {
+      // Handle errors here
+      print("Error during OTP verification: $e");
+      // Show error dialog or message
+    }
   }
 
   resendText() {

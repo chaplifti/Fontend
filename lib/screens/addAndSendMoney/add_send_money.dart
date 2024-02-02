@@ -140,7 +140,7 @@ class _AddAndSendMoneyScreenState extends State<AddAndSendMoneyScreen> {
                     // You can modify this to include images
                     children: [
                       // Add your image widget here if needed
-                      SizedBox(width: 8), // Adjust spacing
+                      const SizedBox(width: 8), // Adjust spacing
                       Text(value),
                     ],
                   ),

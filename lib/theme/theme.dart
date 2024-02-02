@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 const Color primaryColor = Colors.indigo;
 /*const Color primaryColor = Color.fromRGBO(31, 69, 144, 1);*/
-const Color secondaryColor = Colors.indigo;
+const Color secondaryColor = Colors.indigoAccent;
 /*const Color secondaryColor = Color.fromRGBO(37, 150, 190, 1);*/
 const Color screenBgColor = Color(0xFFF4F4F4);
 const Color whiteColor = Colors.white;
@@ -16,7 +16,8 @@ const Color f8Color = Color(0xFFFBF8F8);
 const Color greenColor = Color(0xFF189915);
 const Color redColor = Color(0xFFD24036);
 const Color d9E3EAColor = Color(0xFFD9E3EA);
-const Color darkBlueColor = Color(0xFF1E4799);
+const Color darkBlueColor = Colors.indigoAccent;
+// const Color darkBlueColor = Color(0xFF1E4799);
 const Color darkGreenColor = Color(0xFF1E996D);
 const Color darkRedColor = Color(0xFFD2182D);
 const Color gradientStartColor = Color(0xFF1f4590);

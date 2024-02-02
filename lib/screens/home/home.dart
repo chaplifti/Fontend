@@ -7,6 +7,7 @@ import 'package:iconify_flutter/icons/carbon.dart';
 import 'package:intl/intl.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:rc_fl_gopoolar/widget/column_builder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +17,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String? _firstName;
+  String? _lastName;
+  String? _phoneNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchValue();
+  }
+
+  Future<void> _fetchValue() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _firstName = prefs.getString('firstName');
+      _lastName = prefs.getString('lastName');
+      _phoneNumber = prefs.getString('phoneNumber');
+    });
+  }
+
   Map<int, Widget> pointsLocations = {};
   int locationCounter = 0;
 
@@ -49,11 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   DateTime date = DateTime.now();
 
-  @override
-  void initState() {
-    super.initState();
-  }
-
   void addNewLocation() {
     setState(() {
       pointsLocations[locationCounter] = pointsLocationAddress(
@@ -71,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+
     return Scaffold(
       backgroundColor: f8Color,
       appBar: AppBar(
@@ -787,18 +803,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.grey.withOpacity(0.5),
                     spreadRadius: 2,
                     blurRadius: 4,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: IconButton(
-                icon: Icon(Icons.delete, color: Colors.black),
+                icon: const Icon(Icons.delete, color: Colors.black),
                 onPressed: () => deleteLocation(locationCounter),
                 iconSize: 24.0,
                 splashRadius: 20.0,
                 splashColor: Colors.grey.withOpacity(0.5),
-                padding: EdgeInsets.all(8.0),
-                constraints: BoxConstraints(),
+                padding: const EdgeInsets.all(8.0),
+                constraints: const BoxConstraints(),
               ),
             )
           ],
@@ -866,20 +882,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.grey.withOpacity(0.5),
                           spreadRadius: 2,
                           blurRadius: 4,
-                          offset: Offset(0, 2),
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.add, color: Colors.black),
+                      icon: const Icon(Icons.add, color: Colors.black),
                       onPressed: () {
                         addNewLocation();
                       },
                       iconSize: 24.0,
                       splashRadius: 20.0,
                       splashColor: Colors.grey.withOpacity(0.5),
-                      padding: EdgeInsets.all(8.0),
-                      constraints: BoxConstraints(),
+                      padding: const EdgeInsets.all(8.0),
+                      constraints: const BoxConstraints(),
                     ),
                   )
                 : const SizedBox(),
@@ -972,7 +988,7 @@ class _HomeScreenState extends State<HomeScreen> {
           tabList.length * 2 - 1, // Adjust the number for the SizedBox
           (index) {
             if (index % 2 == 1) {
-              return SizedBox(width: 10); // Spacing between buttons
+              return const SizedBox(width: 10); // Spacing between buttons
             }
             int tabIndex = index ~/ 2;
             return Expanded(
@@ -983,7 +999,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                 },
                 child: AnimatedContainer(
-                  duration: Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                   padding: const EdgeInsets.symmetric(
                       vertical: fixPadding * 1.3, horizontal: fixPadding),
@@ -1054,23 +1070,35 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Welcome john",
-                style: semibold16White,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Text(
+                    _firstName ?? 'No value found',
+                    style: semibold16White,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(
+                    width: 5,
+                  ),
+                  Text(
+                    _lastName ?? 'No value found',
+                    style: semibold16White,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
               heightBox(2.0),
-              const Row(
+              Row(
                 children: [
-                  Iconify(
-                    Carbon.location,
+                  const Iconify(
+                    Carbon.phone,
                     color: whiteColor,
                     size: 14.0,
                   ),
                   width5Space,
                   Expanded(
                     child: Text(
-                      "Dar es Salaam",
+                      _phoneNumber ?? 'No value found',
                       style: medium14White,
                       overflow: TextOverflow.ellipsis,
                     ),
