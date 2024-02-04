@@ -6,9 +6,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:pinput/pinput.dart';
 import 'package:rc_fl_gopoolar/screens/auth/firebase.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   const OTPVerificationScreen({super.key});
@@ -20,11 +22,20 @@ class OTPVerificationScreen extends StatefulWidget {
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   Timer? countdownTimer;
   Duration myDuration = const Duration(minutes: 1);
+  String? passwordResetPhone;
 
   @override
   void initState() {
     super.initState();
     startTimer();
+    _loadPasswordResetPhone();
+  }
+
+  Future<void> _loadPasswordResetPhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      passwordResetPhone = prefs.getString('PasswordResetPhone');
+    });
   }
 
   void startTimer() {
@@ -116,19 +127,20 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     );
   }
 
-  void verifyOTP(
-      String enteredOTP, String verificationId, BuildContext context) async {
-    try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-          verificationId: verificationId, smsCode: enteredOTP);
+  void verifyOTP(String enteredOTP, BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? verification_id = prefs.getString('verificationId');
 
-      await FirebaseAuthenticationService.auth.signInWithCredential(credential);
-      Navigator.pushNamed(
-          context, '/home'); // Navigate to home after successful verification
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      verificationId: verification_id!,
+      smsCode: enteredOTP,
+    );
+
+    try {
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      Navigator.pushNamed(context, '/forgot');
     } catch (e) {
-      // Handle errors here
-      print("Error during OTP verification: $e");
-      // Show error dialog or message
+      print("Error from verifyOTP $e");
     }
   }
 
@@ -158,7 +170,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
   otpField() {
     return Pinput(
-      length: 5,
+      length: 6,
       cursor: Container(
         height: 20.0,
         width: 1.5,
@@ -166,11 +178,14 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       ),
       defaultPinTheme: pinTheme,
       onCompleted: (value) {
-        Timer(const Duration(seconds: 3), () {
-          stopTimer();
-          Navigator.popAndPushNamed(context, '/bottomBar');
-        });
-        pleaseWaitDialog();
+        // Timer(const Duration(seconds: 3), () {
+        //   stopTimer();
+        //   Navigator.popAndPushNamed(context, '/bottomBar');
+        // });
+        verifyOTP(value, context);
+        // pleaseWaitDialog(context);
+        // verifyButton(value);
+        // pleaseWaitDialog();
       },
     );
   }
@@ -178,11 +193,16 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   verifyButton() {
     return InkWell(
       onTap: () {
-        Timer(const Duration(seconds: 3), () {
-          stopTimer();
-          Navigator.popAndPushNamed(context, '/bottomBar');
-        });
-        pleaseWaitDialog();
+        // Timer(const Duration(seconds: 3), () {
+        //   stopTimer();
+        //   Navigator.popAndPushNamed(context, '/bottomBar');
+        // });
+        // pleaseWaitDialog();
+        // CustomFirebaseAuthenticationService.resetUser(
+        //   passwordResetPhone!,
+        //   smsCode: "code",
+        //   context: context,
+        // );
       },
       child: Container(
         width: double.maxFinite,
@@ -208,32 +228,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     );
   }
 
-  pleaseWaitDialog() {
-    return showDialog(
-      barrierDismissible: false,
+  pleaseWaitDialog(BuildContext context) {
+    showDialog(
+      barrierDismissible: false, // User must tap button to dismiss
       context: context,
-      builder: (context) {
+      builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: whiteColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          child: ListView(
-            shrinkWrap: true,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: fixPadding * 3.5),
-            children: const [
-              CupertinoActivityIndicator(
-                color: primaryColor,
-                radius: 15.0,
-              ),
-              heightSpace,
-              Text(
-                "Please wait",
-                style: semibold18Primary,
-                textAlign: TextAlign.center,
-              )
-            ],
+          // Use Dialog instead of Scaffold
+          backgroundColor:
+              Colors.transparent, // Makes the dialog background transparent
+          elevation: 1, // No shadow
+          child: Center(
+            // Center the animation in the dialog
+            child: LoadingAnimationWidget.staggeredDotsWave(
+              color: Colors.white,
+              size: 50,
+            ),
           ),
         );
       },

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -28,12 +30,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchValue() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _firstName = prefs.getString('firstName');
-      _lastName = prefs.getString('lastName');
-      _phoneNumber = prefs.getString('phoneNumber');
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final String? userDataString = prefs.getString('userData');
+
+    print(userDataString);
+
+    if (userDataString != null) {
+      final Map<String, dynamic> userData = jsonDecode(userDataString);
+
+      setState(() {
+        _firstName = userData['first_name'];
+        _lastName = userData['last_name'];
+        _phoneNumber = userData['phone_number'];
+      });
+    }
   }
 
   Map<int, Widget> pointsLocations = {};

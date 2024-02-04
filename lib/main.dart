@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:rc_fl_gopoolar/screens/auth/forgot_password.dart';
 import 'package:rc_fl_gopoolar/screens/screens.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -228,6 +229,11 @@ class MyApp extends StatelessWidget {
       case '/faqs':
         return PageTransition(
             child: const FAQsScreen(),
+            type: PageTransitionType.rightToLeft,
+            settings: settings);
+      case '/forgot':
+        return PageTransition(
+            child: const ForgotPassword(),
             type: PageTransitionType.rightToLeft,
             settings: settings);
       default:

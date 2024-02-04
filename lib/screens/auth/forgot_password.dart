@@ -18,82 +18,49 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../notification.dart';
 import 'firebase.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class ForgotPassword extends StatefulWidget {
+  const ForgotPassword({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<ForgotPassword> createState() => _ForgotPasswordState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _ForgotPasswordState extends State<ForgotPassword> {
   DateTime? backPressTime;
 
-  final TextEditingController _mobileNumberController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _passwordConfirmController =
+      TextEditingController();
 
   @override
   void dispose() {
     // Dispose controllers when the widget is disposed
-    _mobileNumberController.dispose();
     _passwordController.dispose();
+    _passwordConfirmController.dispose();
     super.dispose();
   }
 
-  Future<void> login(
-      String type, String phone, String password, BuildContext context) async {
+  Future<void> reset(
+      String password, String c_password, BuildContext context) async {
     http.Response response;
 
-    try {
-      if (type == "login") {
-        // Login
-        response = await http.post(
-          Uri.parse('$apiUrl/api/login'),
-          body: {
-            'phone_number': phone,
-            'password': password,
-          },
-        );
-      } else {
-        // Password reset
-        response = await http.post(
-          Uri.parse('$apiUrl/api/password-reset/request'),
-          body: {
-            'phone_number': phone,
-          },
-        );
+    final prefs = await SharedPreferences.getInstance();
+    final String? phone = prefs.getString('PasswordResetPhone');
 
-        print(response.body);
-      }
+    try {
+      response = await http.post(
+        Uri.parse('$apiUrl/api/password-reset/confirm'),
+        body: {
+          'phone_number': phone,
+          'password': password,
+          'password_confirmation': c_password,
+        },
+      );
 
       final responseData = jsonDecode(response.body);
       if (response.statusCode == 200) {
         // Assuming the login API returns user data on successful login
-        print("Assuming the login API returns user data on successful login");
-        if (type == "login") {
-          final user = responseData['user'];
-
-          // Print and save user data
-          print("User Data: ${user.toString()}");
-
-          final prefs = await SharedPreferences.getInstance();
-          bool saved = await prefs.setString('userData', jsonEncode(user));
-
-          if (saved) {
-            Navigator.pushNamed(context, '/bottomBar');
-          } else {
-            // Handle save failure
-            print("Failed to save user data");
-          }
-        } else {
-          // Handle password reset success
-          print("Handle password reset success");
-          final prefs = await SharedPreferences.getInstance();
-          prefs.setString('PasswordResetPhone', phone);
-          CustomFirebaseAuthenticationService.resetUser(
-            phone,
-            context: context,
-          );
-        }
+        Navigator.pushNamed(context, '/login');
       } else {
         Navigator.pop(context);
         // Assuming displayErrors function exists to format error messages
@@ -150,29 +117,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.all(fixPadding * 2.0),
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    loginTitle(),
+                    Title(),
                     heightSpace,
-                    welcomeText(),
-                    heightSpace,
-                    heightSpace,
+                    // welcomeText(),
                     heightSpace,
                     heightSpace,
-                    mobileNumberField(),
                     heightSpace,
                     heightSpace,
                     passwordField(),
                     heightSpace,
                     heightSpace,
                     heightSpace,
-                    forgotText(),
+                    confirmField(),
                     heightSpace,
                     heightSpace,
                     heightSpace,
-                    loginButton(context),
+                    resetButton(context),
                     heightSpace,
                     heightSpace,
                     heightSpace,
-                    registerText(),
                   ],
                 ),
               )
@@ -183,14 +146,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  loginButton(contex) {
+  resetButton(contex) {
     return InkWell(
       onTap: () {
         // Navigator.pushNamed(context, '/register');
         // loginUser('phone', context);
         // pleaseWaitDialog(context);
-        login("login", _mobileNumberController.text, _passwordController.text,
-            context);
+        reset(
+            _passwordController.text, _passwordConfirmController.text, context);
         pleaseWaitDialog(context);
       },
       child: Container(
@@ -210,40 +173,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         alignment: Alignment.center,
         child: const Text(
-          "Login",
+          "reset",
           style: bold18White,
-        ),
-      ),
-    );
-  }
-
-  mobileNumberField() {
-    return Container(
-      decoration: BoxDecoration(
-        color: whiteColor,
-        borderRadius: BorderRadius.circular(10.0),
-        boxShadow: [
-          BoxShadow(
-            color: blackColor.withOpacity(0.1),
-            blurRadius: 12.0,
-            offset: const Offset(0, 6),
-          )
-        ],
-      ),
-      child: TextField(
-        controller: _mobileNumberController,
-        cursorColor: primaryColor,
-        style: semibold15Black33,
-        keyboardType: TextInputType.phone,
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          hintText: "Enter your Mobile Number",
-          hintStyle: semibold15Grey,
-          contentPadding: EdgeInsets.symmetric(vertical: fixPadding * 1.4),
-          prefixIcon: Icon(
-            CupertinoIcons.phone,
-            size: 20.0,
-          ),
         ),
       ),
     );
@@ -282,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  mobileNumberField1() {
+  confirmField() {
     return Container(
       decoration: BoxDecoration(
         color: whiteColor,
@@ -292,81 +223,32 @@ class _LoginScreenState extends State<LoginScreen> {
             color: blackColor.withOpacity(0.1),
             blurRadius: 12.0,
             offset: const Offset(0, 6),
-          ),
+          )
         ],
       ),
-      child: const IntlPhoneField(
-        disableLengthCheck: true,
-        showCountryFlag: false,
-        dropdownIconPosition: IconPosition.trailing,
-        dropdownIcon: Icon(
-          Icons.keyboard_arrow_down,
-          color: black33Color,
-          size: 20.0,
-        ),
+      child: TextField(
+        controller: _passwordConfirmController,
+        obscureText: true,
         cursorColor: primaryColor,
         style: semibold15Black33,
-        initialCountryCode: 'IN',
-        dropdownTextStyle: semibold15Black33,
-        flagsButtonMargin: EdgeInsets.symmetric(horizontal: fixPadding * 0.7),
-        decoration: InputDecoration(
+        keyboardType: TextInputType.emailAddress,
+        decoration: const InputDecoration(
           border: InputBorder.none,
-          hintText: "Enter your mobile number",
+          hintText: "Confirm your Password",
           hintStyle: semibold15Grey,
           contentPadding: EdgeInsets.symmetric(vertical: fixPadding * 1.4),
+          prefixIcon: Icon(
+            CupertinoIcons.padlock,
+            size: 20.0,
+          ),
         ),
       ),
     );
   }
 
-  welcomeText() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: fixPadding * 2.0),
-      child: Text(
-        "Welcome, please login your account using mobile number",
-        style: medium15Grey,
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  registerText() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: fixPadding * 2.0),
-      child: InkWell(
-        onTap: () {
-          // Navigator.pushNamed(context, '/otp');
-          Navigator.pushNamed(context, '/register');
-        },
-        child: const Text(
-          "Don't have an account? Register here.",
-          style: medium15Grey,
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-
-  forgotText() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: fixPadding * 2.0),
-      child: InkWell(
-        onTap: () {
-          login("forgot", _mobileNumberController.text, "", context);
-          pleaseWaitDialog(context);
-        },
-        child: const Text(
-          "Forgot passowrd?",
-          style: medium15Grey,
-          textAlign: TextAlign.right,
-        ),
-      ),
-    );
-  }
-
-  loginTitle() {
+  Title() {
     return const Text(
-      "Login",
+      "Reset your passowrd",
       style: semibold20Black33,
       textAlign: TextAlign.center,
     );
