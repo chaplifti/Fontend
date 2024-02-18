@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,6 +15,34 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  String? _firstName;
+  String? _lastName;
+  String? _phoneNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchValue();
+  }
+
+  Future<void> _fetchValue() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? userDataString = prefs.getString('userData');
+    // Obtain shared preferences.
+
+    // print(userDataString);
+
+    if (userDataString != null) {
+      final Map<String, dynamic> userData = jsonDecode(userDataString);
+
+      setState(() {
+        _firstName = userData['first_name'];
+        _lastName = userData['last_name'];
+        _phoneNumber = userData['phone_number'];
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -270,35 +301,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   userDetail() {
+    if (_firstName == null || _lastName == null || _phoneNumber == null) {
+      return const CircularProgressIndicator(); // Replace with your loading widget.
+    }
     return Padding(
       padding: const EdgeInsets.all(fixPadding * 2.0),
       child: Row(
         children: [
-          Container(
-            height: 75.0,
-            width: 75.0,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              image: DecorationImage(
-                image: AssetImage(
-                  "assets/profile/user-image.png",
-                ),
+          CircleAvatar(
+            maxRadius: 35,
+            backgroundColor: Colors.indigo,
+            child: Text(
+              _firstName?[0] ?? 'No value found',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 33,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
+          // Container(
+          //   height: 75.0,
+          //   width: 75.0,
+          //   decoration: const BoxDecoration(
+          //     shape: BoxShape.circle,
+          //     image: DecorationImage(
+          //       image: AssetImage(
+          //         "assets/profile/user-image.png",
+          //       ),
+          //     ),
+          //   ),
+          // ),
           widthSpace,
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "John Wilson",
+                  '$_firstName $_lastName',
                   style: semibold17Black33,
                   overflow: TextOverflow.ellipsis,
                 ),
                 height5Space,
                 Text(
-                  "johnwilson@mail.com",
+                  _phoneNumber!,
                   style: semibold16Grey,
                   overflow: TextOverflow.ellipsis,
                 )

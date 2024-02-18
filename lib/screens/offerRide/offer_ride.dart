@@ -1,7 +1,17 @@
+import 'dart:convert';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:rc_fl_gopoolar/widget/column_builder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import '../../constants/key.dart';
+import '../../utilis/dialog.dart';
+import '../../utilis/response.dart';
+import '../notification.dart';
 
 class OfferRideScreen extends StatefulWidget {
   const OfferRideScreen({super.key});
@@ -11,16 +21,217 @@ class OfferRideScreen extends StatefulWidget {
 }
 
 class _OfferRideScreenState extends State<OfferRideScreen> {
-  final carList = [
-    "Mercedes-Benz",
-    "Toyota matrix",
-    "Audi A4",
-  ];
-
   final seatList = ["1", "2", "3", "4", "5", "6", "7", "8"];
   String? selectedSeat;
+  TextEditingController priceController = TextEditingController();
+  TextEditingController dateAndTimeController = TextEditingController();
+  // TextEditingController dateAndTimeController = TextEditingController();
 
   String? selectedCar;
+  int? selectedCarID;
+
+  String? pickupAddress;
+  String? destinationAddress;
+  List<Map<String, dynamic>> stopPointsLocation = [];
+  List<Map<String, dynamic>> vehicleList = [];
+
+  Future<void> _loadLocations() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? pickupLocationList = prefs.getStringList('sourceLocation');
+    List<String>? destinationLocationList =
+        prefs.getStringList('destinationLocation');
+    List<String>? stopsJson = prefs.getStringList('stopPointsLocation');
+
+    // Safely access the first item if available, otherwise null.
+    String? localPickupAddress =
+        pickupLocationList?.isNotEmpty == true ? pickupLocationList![0] : null;
+    String? localDestinationAddress =
+        destinationLocationList?.isNotEmpty == true
+            ? destinationLocationList![0]
+            : null;
+
+    List<Map<String, dynamic>> localStopPointsLocation = [];
+    if (stopsJson != null) {
+      // Decode each JSON string to Map<String, dynamic> and add to list
+      for (String stop in stopsJson) {
+        try {
+          Map<String, dynamic> decoded = jsonDecode(stop);
+          localStopPointsLocation.add(decoded);
+        } catch (e) {
+          // Handle or log error if JSON decoding fails
+          print("Error decoding stop point: $e");
+        }
+      }
+    }
+
+    setState(() {
+      pickupAddress = localPickupAddress;
+      destinationAddress = localDestinationAddress;
+      stopPointsLocation = localStopPointsLocation;
+    });
+    for (int i = 0; i < stopPointsLocation.length; i++) {
+      var data = jsonDecode(stopPointsLocation[i]['details']);
+      print(data['address']);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocations();
+    fetchVehicleList();
+  }
+
+  Future<void> fetchVehicleList() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+
+    final response = await http.get(
+      Uri.parse('$apiUrl/api/user/vehicles'),
+      headers: {
+        'Authorization': 'Bearer $savedAccessUserToken',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final vehicles = jsonResponse['vehicles'] as List<dynamic>;
+      setState(() {
+        vehicleList = List<Map<String, dynamic>>.from(vehicles);
+      });
+
+      print(
+          "vehicleList----------------------------------------------------$vehicleList");
+    } else {
+      print('Failed to fetch vehicle list');
+    }
+  }
+
+  String convertDate(String dateStr) {
+    final DateFormat originalFormat = DateFormat("d MMMM,HH:mma", "en_US");
+
+    try {
+      DateTime dateTime = originalFormat.parse(dateStr);
+      final DateFormat iso8601Format = DateFormat("yyyy-MM-ddTHH:mm:ss");
+      String iso8601DateStr = iso8601Format.format(dateTime);
+
+      return iso8601DateStr;
+    } catch (e) {
+      print('Error parsing date: $e');
+      return '';
+    }
+  }
+
+  Future<void> createRide({
+    required List<Map<String, dynamic>> stopPoint,
+    required double price,
+    required int availableSeats,
+    required String startTime,
+  }) async {
+    pleaseWaitDialog(context);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+
+    List<String>? pickupLocationList = prefs.getStringList('sourceLocation');
+
+    List<String>? stopsJson = prefs.getStringList('stopPointsLocation');
+    // Remove data for the 'counter' key.
+    // await prefs.remove('stopPointsLocation');
+
+    if (stopsJson != null) {
+      List<Map<String, dynamic>> transformedList = [];
+
+      for (String stopJson in stopsJson) {
+        Map<String, dynamic> stopMap = jsonDecode(stopJson);
+
+        // Extracting "lat" and "long" from the "details" field
+        Map<String, dynamic> details = jsonDecode(stopMap['details']);
+        double lat = double.parse(details['lat']);
+        double lng = double.parse(details['long']);
+
+        // Creating the desired format
+        Map<String, dynamic> transformedStop = {
+          "lat": lat,
+          "lng": lng,
+        };
+
+        transformedList.add(transformedStop);
+      }
+      List<String>? destinationLocationList =
+          prefs.getStringList('destinationLocation');
+      final String? dateAndTime = prefs.getString('dateAndTime');
+      final String? noOfSeat = prefs.getString('noOfSeat');
+
+      final uri = Uri.parse(
+          '$apiUrl/api/user/rides'); // Replace with your actual endpoint
+      final headers = {
+        'Authorization': 'Bearer $savedAccessUserToken',
+        'Content-Type': 'application/json'
+      };
+      final body = jsonEncode({
+        'vehicle_id': selectedCarID,
+        'starting_point': {
+          "lat": pickupLocationList![1],
+          "lng": pickupLocationList[2]
+        },
+        'stop_points': transformedList,
+        'destination': {
+          "lat": destinationLocationList![1],
+          "lng": destinationLocationList[2]
+        },
+        'price': price,
+        'available_seats': noOfSeat,
+        'start_time': convertDate(dateAndTime!),
+      });
+      print(
+          "body-----------------------------------------------------------------------------$body");
+      final response = await http.post(uri, headers: headers, body: body);
+      // final responseData = jsonDecode(response.body);
+      print('Response body: ${response.body}');
+      try {
+        final response = await http.post(uri, headers: headers, body: body);
+        final responseData = jsonDecode(response.body);
+
+        String message = displayResponse(responseData);
+        if (response.statusCode == 201) {
+          Navigator.pop(context);
+
+          // ignore: use_build_context_synchronously
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return NotificationDialog(
+                message: message,
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+            },
+          ).then((_) {
+            Navigator.pushNamed(context, '/bottomBar');
+          });
+          print('Trip created successfully: ${response.body}');
+        } else {
+          Navigator.pop(context);
+          // ignore: use_build_context_synchronously
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return NotificationDialog(
+                message: message,
+                icon: Icons.error,
+                iconColor: Colors.red,
+              );
+            },
+          );
+        }
+        print('Failed to create trip: ${response.statusCode} ${response.body}');
+      } catch (e) {
+        // Handle network errors or other exceptions
+        print('Error creating trip: $e');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,10 +274,6 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                 yourCar(context),
                 heightSpace,
                 heightSpace,
-                availableSeat(size),
-                heightSpace,
-                heightSpace,
-                facilityField(size)
               ],
             ),
           )
@@ -82,7 +289,12 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: GestureDetector(
         onTap: () {
-          Navigator.pushNamed(context, '/success', arguments: {"id": 1});
+          createRide(
+              stopPoint: stopPointsLocation,
+              price: 67890,
+              availableSeats: 3,
+              startTime: '2pm');
+          // Navigator.pushNamed(context, '/success', arguments: {"id": 1});
         },
         child: Container(
           margin: const EdgeInsets.all(fixPadding * 2.0),
@@ -106,78 +318,6 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  facilityField(Size size) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        titleText("Facility (i.e Ac, Music etc)"),
-        heightSpace,
-        Container(
-          height: size.height * 0.13,
-          decoration: boxDecoration,
-          alignment: Alignment.center,
-          child: const TextField(
-            expands: true,
-            maxLines: null,
-            minLines: null,
-            style: semibold15Black33,
-            cursorColor: primaryColor,
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.symmetric(
-                  horizontal: fixPadding, vertical: fixPadding * 1.5),
-              border: InputBorder.none,
-              hintText: "Enter facility",
-              hintStyle: medium15Grey,
-              isDense: true,
-            ),
-          ),
-        )
-      ],
-    );
-  }
-
-  availableSeat(Size size) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        titleText("Available seat"),
-        heightSpace,
-        GestureDetector(
-          onTap: () {
-            noOfSeatBottomsheet(size);
-          },
-          child: Container(
-            decoration: boxDecoration,
-            width: double.maxFinite,
-            padding: const EdgeInsets.symmetric(
-                horizontal: fixPadding, vertical: fixPadding * 1.2),
-            child: Row(
-              children: [
-                Expanded(
-                  child: selectedSeat != null
-                      ? Text(
-                          "$selectedSeat Seat",
-                          style: semibold15Black33,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : const Text(
-                          "Select available seat",
-                          style: medium15Grey,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                ),
-                const Icon(
-                  Icons.keyboard_arrow_down,
-                  color: greyColor,
-                )
-              ],
-            ),
-          ),
-        )
-      ],
     );
   }
 
@@ -312,17 +452,19 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                     ListTile(
                       onTap: () {
                         setState(() {
-                          selectedCar = carList[index];
+                          selectedCarID = vehicleList[index]['id'];
+                          selectedCar =
+                              vehicleList[index]['vehicle_name'].toString();
                         });
                         Navigator.pop(context);
                       },
                       title: Text(
-                        carList[index],
+                        vehicleList[index]['vehicle_name'].toString(),
                         style: semibold15Black33,
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    carList.length == index + 1
+                    vehicleList.length == index + 1
                         ? const SizedBox()
                         : Container(
                             height: 1,
@@ -332,7 +474,7 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                   ],
                 );
               },
-              itemCount: carList.length,
+              itemCount: vehicleList.length,
             )
           ],
         );
@@ -349,18 +491,19 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
         Container(
           decoration: boxDecoration,
           alignment: Alignment.center,
-          child: const TextField(
+          child: TextField(
             style: semibold15Black33,
             cursorColor: primaryColor,
+            controller: priceController,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 contentPadding: EdgeInsets.symmetric(
                     horizontal: fixPadding, vertical: fixPadding * 1.5),
                 border: InputBorder.none,
                 hintText: "Write price per seat",
                 hintStyle: medium15Grey,
                 isDense: true,
-                prefixText: "\$",
+                prefixText: "\Tsh ",
                 prefixStyle: medium15Black33),
           ),
         )
@@ -404,6 +547,15 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                 dashPattern: const [2.4, 4],
                 child: const SizedBox(height: 55.0),
               ),
+              for (var stopPoint in stopPointsLocation) ...[
+                stopLocationPointIcon(black33Color),
+                DottedBorder(
+                  padding: EdgeInsets.zero,
+                  color: greyColor,
+                  dashPattern: const [2.4, 4],
+                  child: const SizedBox(height: 55.0),
+                ),
+              ],
               locationIcon(redColor),
             ],
           ),
@@ -415,8 +567,8 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
               children: [
                 titleText("Pick up location"),
                 height5Space,
-                const Text(
-                  "B 420 Broome station,New york, NY 100013, USA ",
+                Text(
+                  pickupAddress ?? 'No pickup address provided',
                   style: medium14Grey,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -424,10 +576,33 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                 heightSpace,
                 heightSpace,
                 height5Space,
+                height5Space,
+                height5Space,
+                height5Space,
+                height5Space,
+                height5Space,
+                for (int i = 0; i < stopPointsLocation.length; i++) ...[
+                  titleText("Point location"),
+                  height5Space,
+                  Text(
+                    jsonDecode(stopPointsLocation[i]['details'])['address'],
+                    style: medium14Grey,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  heightSpace,
+                  heightSpace,
+                  height5Space,
+                  height5Space,
+                  height5Space,
+                  height5Space,
+                  height5Space,
+                  height5Space,
+                ],
                 titleText("Destination location"),
                 height5Space,
-                const Text(
-                  "B 420 Broome station,New york, NY 100013, USA ",
+                Text(
+                  destinationAddress ?? 'No destination address provided',
                   style: medium14Grey,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -458,6 +633,23 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
       alignment: Alignment.center,
       child: Icon(
         Icons.location_pin,
+        color: color,
+        size: 18.0,
+      ),
+    );
+  }
+
+  stopLocationPointIcon(Color color) {
+    return Container(
+      height: 24.0,
+      width: 24.0,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: color),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.circle,
         color: color,
         size: 18.0,
       ),

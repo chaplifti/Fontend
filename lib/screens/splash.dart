@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkFirstName() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? firstName = prefs.getString('firstName');
+    String? firstName = prefs.getString('AccessUserToken');
 
     if (firstName != null && firstName.isNotEmpty) {
       // First name exists, push to onboarding screen

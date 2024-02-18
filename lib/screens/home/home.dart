@@ -32,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchValue() async {
     final prefs = await SharedPreferences.getInstance();
     final String? userDataString = prefs.getString('userData');
+    // Obtain shared preferences.
 
     print(userDataString);
 
@@ -76,8 +77,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? sourceLocation;
   String? destinationLocation;
+  Map<String, dynamic> stopPointsLocation = {};
 
   DateTime date = DateTime.now();
+  String _addressText = "Select location";
 
   void addNewLocation() {
     setState(() {
@@ -87,10 +90,42 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void deleteLocation(int id) {
-    setState(() {
-      pointsLocations.remove(id);
-    });
+  // void deleteLocation(int id) {
+  //   deleteStopPointsLocation(id);
+  //   setState(() {
+  //     pointsLocations.remove(id);
+  //     locationCounter--;
+  //   });
+  // }
+
+  void deleteLocation(int key) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
+
+    // Assuming each location is stored as a JSON string in SharedPreferences
+    int indexToDelete = -1;
+    for (var i = 0; i < locations.length; i++) {
+      var location = jsonDecode(locations[i]);
+      if (location['id'] == key) {
+        // This assumes you have an 'id' field in each location JSON
+        indexToDelete = i;
+        break;
+      }
+    }
+
+    if (indexToDelete != -1) {
+      locations.removeAt(indexToDelete);
+      await prefs.setStringList('stopPointsLocation', locations);
+
+      setState(() {
+        pointsLocations.remove(key);
+      });
+
+      print(
+          "Location with key $key deleted from both in-memory and SharedPreferences.");
+    } else {
+      print("Key $key not found or no locations stored.");
+    }
   }
 
   @override
@@ -172,9 +207,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
             destinationLocationAddress(context),
-            heightSpace,
-            heightSpace,
-            // ... rest of your code ...
+            Padding(
+              padding: const EdgeInsets.all(fixPadding * 2.0),
+              child: Row(
+                children: [
+                  dateAndTimeField(size),
+                  selectedTab == 1
+                      ? widthBox(fixPadding * 1.5)
+                      : const SizedBox(),
+                  selectedTab == 1 ? noOfSeatField(size) : const SizedBox(),
+                ],
+              ),
+            ),
             selectedTab == 0 ? findRideButton() : continueButton()
           ],
         ),
@@ -281,7 +325,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Column(
                       children: [
                         ListTile(
-                          onTap: () {
+                          onTap: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setString(
+                                'noOfSeat', seatList[selectedSeat!]);
                             setState(() {
                               selectedSeat = index;
                               noOfSeatController.text =
@@ -637,8 +684,11 @@ class _HomeScreenState extends State<HomeScreen> {
   okayButton(BuildContext context, DateTime dateValue, String selectedHour,
       String selectedMinute, String selectedMarker) {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         Navigator.pop(context);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('dateAndTime',
+            "${DateFormat('dd MMMM').format(dateValue)},$selectedHour:$selectedMinute$selectedMarker");
         setState(() {
           dateAndTimeController.text =
               "${DateFormat('dd MMMM').format(dateValue)},$selectedHour:$selectedMinute$selectedMarker";
@@ -705,9 +755,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.pushNamed(context, '/pickLocation');
-        if (result != null) {
+        final prefs = await SharedPreferences.getInstance();
+
+        if (result != null && result is String) {
+          Map<String, dynamic> data = jsonDecode(result);
+          double lat = double.parse(data['lat']);
+          double long = double.parse(data['long']);
+          await prefs.setStringList('destinationLocation',
+              <String>[data['address'], lat.toString(), long.toString()]);
           setState(() {
-            destinationLocation = result.toString();
+            destinationLocation = data['address'];
           });
         }
       },
@@ -760,10 +817,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.pushNamed(context, '/pickLocation');
-        if (result != null) {
+        final prefs = await SharedPreferences.getInstance();
+        if (result != null && result is String) {
+          String key = 'stopPointsLocation$locationCounter';
+          Map<String, dynamic> locationData = jsonDecode(result);
           setState(() {
-            destinationLocation = result.toString();
+            stopPointsLocation[key] = locationData['address'];
           });
+          String stopPointsJson = jsonEncode(stopPointsLocation);
+          // await prefs.setString('stopPointsLocation', result);
+          // await prefs.setStringList('stopPointsLocation', <String>['Earth', 'Moon', 'Sun']);
+          // await prefs.remove('stopPointsLocation');
+          addStopPointsLocation(result, locationCounter);
         }
       },
       child: Container(
@@ -794,9 +859,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   height5Space,
                   Text(
-                    destinationLocation != null
-                        ? destinationLocation.toString()
-                        : "Select location",
+                    stopPointsLocation["stopPointsLocation$locationCounter"] ??
+                        'Select location',
                     style: medium14Grey,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -837,9 +901,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.pushNamed(context, '/pickLocation');
-        if (result != null) {
+        final prefs = await SharedPreferences.getInstance();
+
+        if (result != null && result is String) {
+          Map<String, dynamic> data = jsonDecode(result);
+          await prefs.setStringList('sourceLocation',
+              <String>[data['address'], data['lat'], data['long']]);
           setState(() {
-            sourceLocation = result.toString();
+            sourceLocation = data['address'];
           });
         }
       },
@@ -1063,18 +1132,30 @@ class _HomeScreenState extends State<HomeScreen> {
   headerTitle() {
     return Row(
       children: [
-        Container(
-          height: 45.0,
-          width: 45.0,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            image: DecorationImage(
-              image: AssetImage(
-                "assets/home/userImage.png",
-              ),
+        CircleAvatar(
+          maxRadius: 25,
+          backgroundColor: Colors.white,
+          child: Text(
+            _firstName?[0] ?? 'No value found',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 25,
+              color: Colors.indigo,
             ),
           ),
         ),
+        // Container(
+        //   height: 45.0,
+        //   width: 45.0,
+        //   decoration: const BoxDecoration(
+        //     shape: BoxShape.circle,
+        //     // image: DecorationImage(
+        //     //   image: AssetImage(
+        //     //     "assets/home/userImage.png",
+        //     //   ),
+        //     // ),
+        //   ),
+        // ),
         widthSpace,
         Expanded(
           child: Column(
@@ -1132,4 +1213,88 @@ class _HomeScreenState extends State<HomeScreen> {
       )
     ],
   );
+}
+
+// Future<void> addStopPointsLocation(String location, int index) async {
+//   final prefs = await SharedPreferences.getInstance();
+
+//   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
+
+//   locations.add(location);
+//   await prefs.setStringList('stopPointsLocation', locations);
+// }
+
+// Future<void> addStopPointsLocation(String location, int index) async {
+//   final prefs = await SharedPreferences.getInstance();
+//   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
+
+//   if (index >= 0 && index < locations.length) {
+//     locations[index] = location;
+//   } else {
+//     locations.add(location);
+//   }
+
+//   await prefs.setStringList('stopPointsLocation', locations);
+//   final List<String>? data = prefs.getStringList('stopPointsLocation');
+//   print("Updated locations list: $data");
+// }
+Future<void> addStopPointsLocation(String location, int id) async {
+  final prefs = await SharedPreferences.getInstance();
+  List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
+
+  // Create a location object with an ID
+  Map<String, dynamic> locationObject = {
+    'id': id,
+    'details':
+        location, // Assuming 'location' is a JSON string of location details
+  };
+
+  // Add or update the location in the list
+  int index = locations.indexWhere((loc) => jsonDecode(loc)['id'] == id);
+  if (index != -1) {
+    // Update existing
+    locations[index] = jsonEncode(locationObject);
+  } else {
+    // Add new
+    locations.add(jsonEncode(locationObject));
+  }
+
+  await prefs.setStringList('stopPointsLocation', locations);
+  final List<String>? data = prefs.getStringList('stopPointsLocation');
+  print("Updated locations list: $data");
+}
+
+// Future<void> addStopPointsLocation(String location, int index) async {
+//   final prefs = await SharedPreferences.getInstance();
+//   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
+
+//   if (index < locations.length) {
+//     locations[index] = location;
+//   } else {
+//     locations.add(location);
+//   }
+
+//   await prefs.setStringList('stopPointsLocation', locations);
+// }
+
+Future<void> deleteStopPointsLocation(int index) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  // Retrieve the current list of locations from SharedPreferences
+  List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
+
+  // Check if the index is within the range of the list to avoid RangeError
+  if (index >= 0 && index < locations.length) {
+    // Remove the item at the specified index
+    locations.removeAt(index);
+    // Save the updated list back to SharedPreferences
+    await prefs.setStringList('stopPointsLocation', locations);
+
+    // Optional: Debugging print to confirm the operation
+    final List<String>? data = prefs.getStringList('stopPointsLocation');
+    print("Updated locations list after deletion: $data");
+  } else {
+    // Handle the case where the index is out of bounds
+    print("Index out of range: Cannot delete location at index $index");
+  }
 }

@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_typing_uninitialized_variables
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
@@ -28,6 +29,7 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
   Map<String, Marker> markers = {};
 
   String? _address;
+  String? _addressToShow;
 
   @override
   void initState() {
@@ -48,6 +50,7 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
 
     setState(() {
       _address = address;
+      _addressToShow = address;
     });
   }
 
@@ -147,7 +150,7 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
                   widthSpace,
                   Expanded(
                     child: Text(
-                      _address.toString(),
+                      _addressToShow.toString(),
                       style: medium14Black33,
                     ),
                   ),
@@ -219,8 +222,15 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
         String country = placeMark.country!;
         String address = "$street, $administrativeArea $postalCode, $country";
 
+        Map<String, dynamic> fullData = {
+          'address': '$address',
+          'lat': '$latitude',
+          'long': '$longitude',
+        };
+
         setState(() {
-          _address = address;
+          _address = jsonEncode(fullData);
+          _addressToShow = address;
           markers.clear();
 
           markers["yourLocation"] = marker;

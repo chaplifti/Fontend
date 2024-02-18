@@ -15,6 +15,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
+import '../../utilis/dialog.dart';
+import '../../utilis/response.dart';
 import '../notification.dart';
 import 'firebase.dart';
 
@@ -71,14 +73,17 @@ class _LoginScreenState extends State<LoginScreen> {
         print("Assuming the login API returns user data on successful login");
         if (type == "login") {
           final user = responseData['user'];
+          final access_token = responseData['access_token'];
 
           // Print and save user data
           print("User Data: ${user.toString()}");
 
           final prefs = await SharedPreferences.getInstance();
           bool saved = await prefs.setString('userData', jsonEncode(user));
+          bool savedAccessUserToken =
+              await prefs.setString('AccessUserToken', access_token);
 
-          if (saved) {
+          if (saved && savedAccessUserToken) {
             Navigator.pushNamed(context, '/bottomBar');
           } else {
             // Handle save failure
@@ -96,8 +101,8 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else {
         Navigator.pop(context);
-        // Assuming displayErrors function exists to format error messages
-        String errorMessage = displayErrors(responseData);
+        // Assuming displayResponse function exists to format error messages
+        String errorMessage = displayResponse(responseData);
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -442,60 +447,3 @@ class _LoginScreenState extends State<LoginScreen> {
 //   );
 // }
 
-pleaseWaitDialog(BuildContext context) {
-  showDialog(
-    barrierDismissible: false, // User must tap button to dismiss
-    context: context,
-    builder: (BuildContext context) {
-      return Dialog(
-        // Use Dialog instead of Scaffold
-        backgroundColor:
-            Colors.transparent, // Makes the dialog background transparent
-        elevation: 1, // No shadow
-        child: Center(
-          // Center the animation in the dialog
-          child: LoadingAnimationWidget.staggeredDotsWave(
-            color: Colors.white,
-            size: 50,
-          ),
-        ),
-      );
-    },
-  );
-}
-
-String displayErrors(dynamic response) {
-  Map<String, dynamic> jsonResponse;
-  if (response is String) {
-    jsonResponse = jsonDecode(response) as Map<String, dynamic>;
-  } else if (response is Map) {
-    jsonResponse = response.cast<String, dynamic>();
-  } else {
-    return 'Unexpected response format';
-  }
-
-  Map<String, dynamic> errors = {};
-
-  if (jsonResponse.containsKey('errors')) {
-    errors = jsonResponse['errors'] as Map<String, dynamic>;
-  } else if (jsonResponse.containsKey('error')) {
-    errors = {
-      'general': [jsonResponse['error']]
-    };
-  }
-
-  String errorMessage = '';
-  errors.forEach((key, dynamic value) {
-    if (value is List<dynamic> && value.isNotEmpty) {
-      errorMessage += '${value[0]}\n';
-    } else if (value is String) {
-      errorMessage += '$value\n';
-    }
-  });
-
-  if (errorMessage.isNotEmpty) {
-    errorMessage = errorMessage.substring(0, errorMessage.length - 1);
-  }
-
-  return errorMessage;
-}

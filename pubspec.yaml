@@ -41,6 +41,7 @@ dependencies:
   loading_animation_widget: ^1.2.0+4
   http:
   shared_preferences:
+  image_picker:
 
 dev_dependencies:
   flutter_test:
