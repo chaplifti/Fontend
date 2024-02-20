@@ -43,6 +43,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     final data =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
     final id = data['id'];
+    final ride = data['id'];
+
+    print("ride-----------------------------------------------------$ride");
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -69,8 +73,8 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.zero,
         children: [
-          riderDetail(size),
-          rideDetail(),
+          riderDetail(size, ride),
+          rideDetail(ride),
           heightSpace,
           heightSpace,
           passangerDetail(),
@@ -79,14 +83,14 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           review(),
           heightSpace,
           heightSpace,
-          vehicleInfo()
+          vehicleInfo(ride)
         ],
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(fixPadding * 2.0),
         child: Row(
           children: [
-            id == 0
+            id != 1
                 ? buttonWidget("Request ride", () {
                     Navigator.pushNamed(context, '/success',
                         arguments: {"id": 0});
@@ -234,7 +238,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  vehicleInfo() {
+  vehicleInfo(ride) {
     return Container(
       padding: const EdgeInsets.symmetric(
           vertical: fixPadding * 1.5, horizontal: fixPadding * 2.0),
@@ -249,11 +253,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           ),
           heightSpace,
           height5Space,
-          vehicleDetailWidget(
-              "Car model", "Toyota Matrix | KJ 5454 | Black colour"),
+          vehicleDetailWidget("Car model", ride["vehicle"]['vehicle_name']),
           heightSpace,
           heightSpace,
-          vehicleDetailWidget("Facilities", "AC , Luggage space, Music system")
+          vehicleDetailWidget("Facilities", ride["vehicle"]['facilities'])
         ],
       ),
     );
@@ -281,106 +284,111 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           horizontal: fixPadding * 2.0, vertical: fixPadding * 1.5),
       width: double.maxFinite,
       color: whiteColor,
-      child: Column(
+      child: const Column(
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   "Review",
                   style: semibold17Secondary,
                 ),
               ),
-              InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, '/review');
-                },
-                child: const Text(
-                  "View all",
-                  style: semibold14Primary,
-                ),
-              )
+              // InkWell(
+              //   onTap: () {
+              //     Navigator.pushNamed(context, '/review');
+              //   },
+              //   child: const Text(
+              //     "View all",
+              //     style: semibold14Primary,
+              //   ),
+              // )
             ],
           ),
           heightSpace,
           height5Space,
-          ColumnBuilder(
-            itemBuilder: (context, index) {
-              return Column(
-                children: [
-                  Column(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            height: 40.0,
-                            width: 40.0,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: whiteColor,
-                              image: DecorationImage(
-                                image: AssetImage(
-                                  reviewList[index]['image'].toString(),
-                                ),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          widthSpace,
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  reviewList[index]['name'].toString(),
-                                  style: semibold16Black33,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  reviewList[index]['date'].toString(),
-                                  style: medium14Grey,
-                                )
-                              ],
-                            ),
-                          ),
-                          widthSpace,
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                reviewList[index]['rate'].toString(),
-                                style: semibold16Grey,
-                              ),
-                              const Icon(
-                                Icons.star_rounded,
-                                color: secondaryColor,
-                                size: 17.0,
-                              )
-                            ],
-                          )
-                        ],
-                      ),
-                      heightSpace,
-                      Text(
-                        reviewList[index]['detail'].toString(),
-                        style: medium14Grey,
-                      )
-                    ],
-                  ),
-                  reviewList.length == index + 1
-                      ? const SizedBox()
-                      : Container(
-                          height: 1,
-                          width: double.maxFinite,
-                          color: greyD4Color,
-                          margin: const EdgeInsets.symmetric(
-                              vertical: fixPadding * 2.0),
-                        )
-                ],
-              );
-            },
-            itemCount: reviewList.length,
-          )
+          Text(
+            "No reviews",
+            style: medium16Grey,
+            textAlign: TextAlign.left,
+          ),
+          // ColumnBuilder(
+          //   itemBuilder: (context, index) {
+          //     return Column(
+          //       children: [
+          //         Column(
+          //           children: [
+          //             Row(
+          //               children: [
+          //                 Container(
+          //                   height: 40.0,
+          //                   width: 40.0,
+          //                   decoration: BoxDecoration(
+          //                     shape: BoxShape.circle,
+          //                     color: whiteColor,
+          //                     image: DecorationImage(
+          //                       image: AssetImage(
+          //                         reviewList[index]['image'].toString(),
+          //                       ),
+          //                       fit: BoxFit.cover,
+          //                     ),
+          //                   ),
+          //                 ),
+          //                 widthSpace,
+          //                 Expanded(
+          //                   child: Column(
+          //                     crossAxisAlignment: CrossAxisAlignment.start,
+          //                     children: [
+          //                       Text(
+          //                         reviewList[index]['name'].toString(),
+          //                         style: semibold16Black33,
+          //                         overflow: TextOverflow.ellipsis,
+          //                       ),
+          //                       Text(
+          //                         reviewList[index]['date'].toString(),
+          //                         style: medium14Grey,
+          //                       )
+          //                     ],
+          //                   ),
+          //                 ),
+          //                 widthSpace,
+          //                 Row(
+          //                   crossAxisAlignment: CrossAxisAlignment.start,
+          //                   children: [
+          //                     Text(
+          //                       reviewList[index]['rate'].toString(),
+          //                       style: semibold16Grey,
+          //                     ),
+          //                     const Icon(
+          //                       Icons.star_rounded,
+          //                       color: secondaryColor,
+          //                       size: 17.0,
+          //                     )
+          //                   ],
+          //                 )
+          //               ],
+          //             ),
+          //             heightSpace,
+          //             Text(
+          //               reviewList[index]['detail'].toString(),
+          //               style: medium14Grey,
+          //             )
+          //           ],
+          //         ),
+          //         reviewList.length == index + 1
+          //             ? const SizedBox()
+          //             : Container(
+          //                 height: 1,
+          //                 width: double.maxFinite,
+          //                 color: greyD4Color,
+          //                 margin: const EdgeInsets.symmetric(
+          //                     vertical: fixPadding * 2.0),
+          //               )
+          //       ],
+          //     );
+          //   },
+          //   itemCount: reviewList.length,
+          // )
         ],
       ),
     );
@@ -405,77 +413,78 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                 ),
                 heightBox(3.0),
                 const Text(
-                  "2 seat booked(1 male, 1 female)",
+                  "No available requests",
                   style: medium16Grey,
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
           heightSpace,
           height5Space,
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.zero,
-            child: Row(
-              children: List.generate(
-                4,
-                (index) => Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: fixPadding * 2.0),
-                  constraints: const BoxConstraints(maxWidth: 60.0),
-                  child: Column(
-                    children: [
-                      passengerList.length > index
-                          ? Container(
-                              height: 50.0,
-                              width: 50.0,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                image: DecorationImage(
-                                  image: AssetImage(
-                                    passengerList[index]['image'].toString(),
-                                  ),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              height: 50.0,
-                              width: 50.0,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: d9E3EAColor,
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                CupertinoIcons.person_fill,
-                                color: whiteColor,
-                                size: 35,
-                              ),
-                            ),
-                      height5Space,
-                      Text(
-                        passengerList.length > index
-                            ? passengerList[index]['name'].toString()
-                            : "Empty seat",
-                        style: medium14Black33,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      )
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          )
+          // SingleChildScrollView(
+          //   scrollDirection: Axis.horizontal,
+          //   physics: const BouncingScrollPhysics(),
+          //   padding: EdgeInsets.zero,
+          //   child: Row(
+          //     children: List.generate(
+          //       4,
+          //       (index) => Container(
+          //         margin:
+          //             const EdgeInsets.symmetric(horizontal: fixPadding * 2.0),
+          //         constraints: const BoxConstraints(maxWidth: 60.0),
+          //         child: Column(
+          //           children: [
+          //             passengerList.length > index
+          //                 ? Container(
+          //                     height: 50.0,
+          //                     width: 50.0,
+          //                     decoration: BoxDecoration(
+          //                       shape: BoxShape.circle,
+          //                       image: DecorationImage(
+          //                         image: AssetImage(
+          //                           passengerList[index]['image'].toString(),
+          //                         ),
+          //                         fit: BoxFit.cover,
+          //                       ),
+          //                     ),
+          //                   )
+          //                 : Container(
+          //                     height: 50.0,
+          //                     width: 50.0,
+          //                     decoration: const BoxDecoration(
+          //                       shape: BoxShape.circle,
+          //                       color: d9E3EAColor,
+          //                     ),
+          //                     alignment: Alignment.center,
+          //                     child: const Icon(
+          //                       CupertinoIcons.person_fill,
+          //                       color: whiteColor,
+          //                       size: 35,
+          //                     ),
+          //                   ),
+          //             height5Space,
+          //             Text(
+          //               passengerList.length > index
+          //                   ? passengerList[index]['name'].toString()
+          //                   : "Empty seat",
+          //               style: medium14Black33,
+          //               textAlign: TextAlign.center,
+          //               maxLines: 2,
+          //               overflow: TextOverflow.ellipsis,
+          //             )
+          //           ],
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // )
         ],
       ),
     );
   }
 
-  rideDetail() {
+  rideDetail(ride) {
     return Container(
       width: double.maxFinite,
       color: whiteColor,
@@ -497,7 +506,8 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                     ),
                     InkWell(
                       onTap: () {
-                        Navigator.pushNamed(context, '/mapView');
+                        Navigator.pushNamed(context, '/mapView',
+                            arguments: {"ride": ride});
                       },
                       child: Text(
                         "Map view",
@@ -518,7 +528,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                   children: [
                     address(
                       greenColor,
-                      '2715 Ash Dr. San Jose, South Dakota 83475',
+                      ride['pickupLocation'],
                     ),
                     Padding(
                       padding:
@@ -533,7 +543,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                     ),
                     address(
                       redColor,
-                      '1901 Thornridge Cir. Shiloh, Hawaii 81063',
+                      ride['destinationLocation'],
                     ),
                   ],
                 ),
@@ -554,10 +564,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             child: Row(
               children: [
                 detailWidget("Start time", "25 June,09 :00AM", 3),
+                // verticaldivider(),
+                // detailWidget("Return time", "25 june,09 :00PM", 3),
                 verticaldivider(),
-                detailWidget("Return time", "25 june,09 :00PM", 3),
-                verticaldivider(),
-                detailWidget("Ride with", "150 people", 2),
+                detailWidget("Ride with", "10 people", 2),
               ],
             ),
           ),
@@ -625,7 +635,11 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  riderDetail(Size size) {
+  riderDetail(Size size, Map<String, dynamic> ride) {
+    // Ensure that 'ride' map contains the 'name' and 'price' keys
+    final String name = ride['name'] ?? 'Unknown';
+    final String price = ride['price']?.toString() ?? 'N/A';
+
     return Padding(
       padding: const EdgeInsets.all(fixPadding * 2.0),
       child: Row(
@@ -643,12 +657,12 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             ),
           ),
           widthSpace,
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Jacob Jones",
+                  name,
                   style: semibold17Black33,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -666,25 +680,30 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                     ),
                     Expanded(
                       child: Text(
-                        " | 120 review",
+                        " | 23 review",
                         style: semibold14Grey,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    )
+                    ),
                   ],
                 ),
                 height5Space,
                 Text(
-                  "Join 2016",
+                  "Join 2024",
                   style: semibold14Grey,
-                )
+                ),
               ],
             ),
           ),
           widthSpace,
-          const Text(
-            "\$15.00",
-            style: semibold18Primary,
+          // Wrap the price in an Expanded or Flexible widget if necessary, or ensure it fits
+          Flexible(
+            child: Text(
+              "\Tsh $price", // Make sure the price variable is correctly interpolated
+              style: semibold18Primary,
+              overflow: TextOverflow
+                  .ellipsis, // Prevent overflow by allowing text to ellipsize
+            ),
           ),
         ],
       ),

@@ -64,12 +64,12 @@ class _SuccessScreenState extends State<SuccessScreen> {
           padding: const EdgeInsets.all(fixPadding * 2.0),
           children: [
             Center(
-              child: Lottie.asset('lottie_assets/success_payment.json'),
-              /*Image.asset(
+              // child: Lottie.asset('lottie_assets/1.json'),
+              child: Image.asset(
                 "assets/success/driving-pana.png",
                 height: size.height * 0.2,
                 fit: BoxFit.cover,
-              ),*/
+              ),
             ),
             heightSpace,
             heightSpace,

@@ -1,6 +1,15 @@
+import 'dart:convert';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+
+import '../../constants/key.dart';
+import '../../utilis/dialog.dart';
+import '../notification.dart';
 
 class FindRideScreen extends StatefulWidget {
   const FindRideScreen({super.key});
@@ -10,78 +19,99 @@ class FindRideScreen extends StatefulWidget {
 }
 
 class _FindRideScreenState extends State<FindRideScreen> {
-  final rideList = [
-    {
-      "pickupLocation": "Mumbai,2464 Royal Ln. Mesa",
-      "destinationLocation": "Pune,2464 Royal Ln. Mesa",
-      "price": "15.00",
-      "image": "assets/findRide/rider-1.png",
-      "name": "Jenny Wilson",
-      "dateTime": "25 June, 10:30am",
-      "rate": 4.8,
-      "bookedSeat": 2
-    },
-    {
-      "pickupLocation": "Mumbai,2464 Royal Ln. Mesa",
-      "destinationLocation": "Pune,2464 Royal Ln. Mesa",
-      "price": "25.00",
-      "image": "assets/findRide/rider-2.png",
-      "name": "Guy Hawkins",
-      "dateTime": "25 June, 10:30am",
-      "rate": 4.8,
-      "bookedSeat": 3
-    },
-    {
-      "pickupLocation": "Mumbai,2464 Royal Ln. Mesa",
-      "destinationLocation": "Pune,2464 Royal Ln. Mesa",
-      "price": "20.00",
-      "image": "assets/findRide/rider-3.png",
-      "name": "Jacob Jones",
-      "dateTime": "25 June, 10:30am",
-      "rate": 4.8,
-      "bookedSeat": 1
-    },
-    {
-      "pickupLocation": "Mumbai,2464 Royal Ln. Mesa",
-      "destinationLocation": "Pune,2464 Royal Ln. Mesa",
-      "price": "30.00",
-      "image": "assets/findRide/rider-4.png",
-      "name": "Floyd Miles",
-      "dateTime": "25 June, 10:30am",
-      "rate": 4.8,
-      "bookedSeat": 2
-    },
-    {
-      "pickupLocation": "Mumbai,2464 Royal Ln. Mesa",
-      "destinationLocation": "Pune,2464 Royal Ln. Mesa",
-      "price": "35.00",
-      "image": "assets/findRide/rider-5.png",
-      "name": "Jerome Bell",
-      "dateTime": "25 June, 10:30am",
-      "rate": 4.8,
-      "bookedSeat": 2
-    },
-    {
-      "pickupLocation": "Mumbai,2464 Royal Ln. Mesa",
-      "destinationLocation": "Pune,2464 Royal Ln. Mesa",
-      "price": "10.00",
-      "image": "assets/findRide/rider-6.png",
-      "name": "Jenny Wilson",
-      "dateTime": "25 June, 10:30am",
-      "rate": 4.8,
-      "bookedSeat": 2
-    },
-    {
-      "pickupLocation": "Mumbai,2464 Royal Ln. Mesa",
-      "destinationLocation": "Pune,2464 Royal Ln. Mesa",
-      "price": "15.00",
-      "image": "assets/findRide/rider-7.png",
-      "name": "Arlene McCoy",
-      "dateTime": "25 June, 10:30am",
-      "rate": 4.8,
-      "bookedSeat": 2
-    },
-  ];
+  var rideList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _findRideNearBy();
+  }
+
+  Future<String> getAddressFromPlacemark(Placemark placemark) async {
+    String street = placemark.street ?? '';
+    String administrativeArea = placemark.administrativeArea ?? '';
+    String postalCode = placemark.postalCode ?? '';
+    String country = placemark.country ?? '';
+
+    return "$street, $administrativeArea $postalCode, $country";
+  }
+
+  Future<void> _findRideNearBy() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? pickupLocationList = prefs.getStringList('sourceLocation');
+    List<String>? destinationLocationList =
+        prefs.getStringList('destinationLocation');
+    final String? dateAndTime = prefs.getString('dateAndTime');
+
+    final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+
+    try {
+      http.Response response;
+      response = await http.post(
+        Uri.parse('$apiUrl/api/user/ride-requests-find'),
+        headers: {
+          'Authorization': 'Bearer $savedAccessUserToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'pickup_location': {
+            "lat": destinationLocationList?[1],
+            "lng": destinationLocationList?[2]
+          },
+          'destination': {
+            "lat": destinationLocationList?[1],
+            "lng": destinationLocationList?[2]
+          },
+          'start_time': dateAndTime,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      List<dynamic> rides = responseData['rides'];
+      List<Map<String, dynamic>> formattedRides = [];
+
+      for (var ride in rides) {
+        var firstName = ride['user']['first_name'];
+        var lastName = ride['user']['last_name'];
+        formattedRides.add({
+          "pickupLocation": ride['starting_point_address'],
+          "destinationLocation": ride['destination_address'],
+          "price": ride['price'],
+          "image": ride['profile_picture'],
+          "name": "$firstName $lastName",
+          "dateTime": "25 June, 10:30am",
+          "rate": 4.8,
+          "bookedSeat": 2,
+          "vehicle": ride["vehicle"],
+          "user": ride["user"],
+          "starting_point": ride["starting_point"],
+          "destination": ride["destination"],
+        });
+      }
+
+      setState(() {
+        rideList = formattedRides;
+      });
+
+      print(
+          "formattedRides------------------------------------------------------------$formattedRides");
+    } catch (error) {
+      // ignore: use_build_context_synchronously
+      Navigator.pop(context);
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return const NotificationDialog(
+            message: "Something went wrong! Please try again later.",
+            icon: Icons.error,
+            iconColor: Colors.red,
+          );
+        },
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +150,8 @@ class _FindRideScreenState extends State<FindRideScreen> {
       itemBuilder: (context, index) {
         return GestureDetector(
           onTap: () {
-            Navigator.pushNamed(context, '/rideDetail', arguments: {"id": 0});
+            Navigator.pushNamed(context, '/rideDetail',
+                arguments: {"id": rideList[index]});
           },
           child: Container(
             width: double.maxFinite,
@@ -169,7 +200,7 @@ class _FindRideScreenState extends State<FindRideScreen> {
                       ),
                       widthSpace,
                       Text(
-                        "\$${rideList[index]['price']}",
+                        "\Tsh ${rideList[index]['price']}",
                         style: semibold18Primary,
                       )
                     ],
@@ -187,19 +218,29 @@ class _FindRideScreenState extends State<FindRideScreen> {
                   padding: const EdgeInsets.all(fixPadding),
                   child: Row(
                     children: [
-                      Container(
-                        height: 40.0,
-                        width: 40.0,
-                        decoration: BoxDecoration(
-                          color: whiteColor,
-                          borderRadius: BorderRadius.circular(5.0),
-                          image: DecorationImage(
-                              image: AssetImage(
-                                rideList[index]['image'].toString(),
+                      rideList[index]['image'] != null
+                          ? Container(
+                              height: 40.0,
+                              width: 40.0,
+                              decoration: BoxDecoration(
+                                color: whiteColor,
+                                borderRadius: BorderRadius.circular(5.0),
+                                image: DecorationImage(
+                                  image: NetworkImage(
+                                    "$apiUrl/storage/${rideList[index]['image']}",
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
-                              fit: BoxFit.cover),
-                        ),
-                      ),
+                            )
+                          : CircleAvatar(
+                              radius: 20.0,
+                              backgroundColor: primaryColor,
+                              child: Text(
+                                rideList[index]['name'][0],
+                                style: semibold15White,
+                              ),
+                            ),
                       widthSpace,
                       Expanded(
                         child: Column(

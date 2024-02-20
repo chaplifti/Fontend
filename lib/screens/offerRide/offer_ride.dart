@@ -123,12 +123,7 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
     }
   }
 
-  Future<void> createRide({
-    required List<Map<String, dynamic>> stopPoint,
-    required double price,
-    required int availableSeats,
-    required String startTime,
-  }) async {
+  Future<void> createRide() async {
     pleaseWaitDialog(context);
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? savedAccessUserToken = prefs.getString('AccessUserToken');
@@ -162,7 +157,9 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
           prefs.getStringList('destinationLocation');
       final String? dateAndTime = prefs.getString('dateAndTime');
       final String? noOfSeat = prefs.getString('noOfSeat');
-
+      var date = convertDate(dateAndTime!);
+      print(
+          "date-----------------------------------------------------------------------------$date");
       final uri = Uri.parse(
           '$apiUrl/api/user/rides'); // Replace with your actual endpoint
       final headers = {
@@ -180,12 +177,13 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
           "lat": destinationLocationList![1],
           "lng": destinationLocationList[2]
         },
-        'price': price,
+        'price': priceController.text,
         'available_seats': noOfSeat,
         'start_time': convertDate(dateAndTime!),
+        'starting_point_address': pickupLocationList[0],
+        'destination_address': destinationLocationList[0],
       });
-      print(
-          "body-----------------------------------------------------------------------------$body");
+
       final response = await http.post(uri, headers: headers, body: body);
       // final responseData = jsonDecode(response.body);
       print('Response body: ${response.body}');
@@ -289,11 +287,7 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: GestureDetector(
         onTap: () {
-          createRide(
-              stopPoint: stopPointsLocation,
-              price: 67890,
-              availableSeats: 3,
-              startTime: '2pm');
+          createRide();
           // Navigator.pushNamed(context, '/success', arguments: {"id": 1});
         },
         child: Container(

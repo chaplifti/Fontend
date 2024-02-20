@@ -11,6 +11,8 @@ import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:rc_fl_gopoolar/widget/column_builder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../notification.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -32,9 +34,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchValue() async {
     final prefs = await SharedPreferences.getInstance();
     final String? userDataString = prefs.getString('userData');
-    // Obtain shared preferences.
-
-    print(userDataString);
 
     if (userDataString != null) {
       final Map<String, dynamic> userData = jsonDecode(userDataString);
@@ -229,7 +228,20 @@ class _HomeScreenState extends State<HomeScreen> {
   continueButton() {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, '/offerRide');
+        if (sourceLocation != null && destinationLocation != null) {
+          Navigator.pushNamed(context, '/offerRide');
+        } else {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return const NotificationDialog(
+                message: "Source and Destination are required.",
+                icon: Icons.error,
+                iconColor: Colors.red,
+              );
+            },
+          );
+        }
       },
       child: Container(
         width: double.maxFinite,
@@ -247,7 +259,22 @@ class _HomeScreenState extends State<HomeScreen> {
   findRideButton() {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, '/findRide');
+        if (sourceLocation != null &&
+            destinationLocation != null &&
+            dateAndTimeController.text.isNotEmpty) {
+          Navigator.pushNamed(context, '/findRide');
+        } else {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return const NotificationDialog(
+                message: "Source, Destination, and Date are required.",
+                icon: Icons.error,
+                iconColor: Colors.red,
+              );
+            },
+          );
+        }
       },
       child: Container(
         width: double.maxFinite,
@@ -276,12 +303,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         child: TextField(
-          readOnly: true,
           style: semibold15Black33,
-          onTap: () {
-            noOfSeatBottomsheet(size);
+          // onTap: () {
+          //   noOfSeatBottomsheet(size);
+          // },
+          onChanged: (value) async {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('noOfSeat', value);
           },
           controller: noOfSeatController,
+          keyboardType: TextInputType.number,
           decoration: const InputDecoration(
             border: InputBorder.none,
             prefixIconConstraints: BoxConstraints(minWidth: 38.0),
