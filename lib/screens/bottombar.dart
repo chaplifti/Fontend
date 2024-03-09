@@ -30,6 +30,10 @@ class _BottomBarState extends State<BottomBar> {
       "title": "Home",
     },
     {
+      "icon": Uil.receipt,
+      "title": "Requests",
+    },
+    {
       "icon": Uil.location_arrow_alt,
       "title": "My rides",
     },
@@ -45,7 +49,9 @@ class _BottomBarState extends State<BottomBar> {
 
   final pages = const [
     HomeScreen(),
-    MyRidesScreen(),
+    MyRequestScreen(),
+    // MyRidesScreen(),
+    RideRequestScreen(),
     WalletScreen(),
     ProfileScreen(),
   ];
@@ -132,7 +138,7 @@ class _BottomBarState extends State<BottomBar> {
                 children: [
                   Row(
                     children: List.generate(
-                      4,
+                      5,
                       (index) => Expanded(
                         child: Center(
                           child: Container(

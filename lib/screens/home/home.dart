@@ -227,7 +227,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   continueButton() {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
+        // final prefs = await SharedPreferences.getInstance();
+        // List<String>? stopsJson = prefs.getStringList('stopPointsLocation');
+        // await prefs.remove('stopPointsLocation');
         if (sourceLocation != null && destinationLocation != null) {
           Navigator.pushNamed(context, '/offerRide');
         } else {
@@ -790,10 +793,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (result != null && result is String) {
           Map<String, dynamic> data = jsonDecode(result);
-          double lat = double.parse(data['lat']);
-          double long = double.parse(data['long']);
+          // double lat = double.parse(data['lat']);
+          // double long = double.parse(data['long']);
+          // await prefs.setStringList('destinationLocation',
+          //     <String>[data['address'], lat.toString(), long.toString()]);
           await prefs.setStringList('destinationLocation',
-              <String>[data['address'], lat.toString(), long.toString()]);
+              <String>[data['address'], data['lat'], data['long']]);
+
+          print("data2----------------------------------------$data");
           setState(() {
             destinationLocation = data['address'];
           });
@@ -938,6 +945,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Map<String, dynamic> data = jsonDecode(result);
           await prefs.setStringList('sourceLocation',
               <String>[data['address'], data['lat'], data['long']]);
+
+          print("data1----------------------------------------$data");
+
           setState(() {
             sourceLocation = data['address'];
           });

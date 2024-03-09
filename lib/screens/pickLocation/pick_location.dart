@@ -10,6 +10,11 @@ import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
+
+import '../../constants/key.dart';
+import 'package:search_map_place_updated/search_map_place_updated.dart';
 
 class PickLocationScreen extends StatefulWidget {
   const PickLocationScreen({super.key});
@@ -23,10 +28,11 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
 
   TextEditingController searchController = TextEditingController();
 
-  static CameraPosition locationposition = const CameraPosition(
+  CameraPosition locationposition = const CameraPosition(
       target: LatLng(-6.787360782866734, 39.27123535111817), zoom: 13.00);
 
   Map<String, Marker> markers = {};
+  List<String> suggestions = [];
 
   String? _address;
   String? _addressToShow;
@@ -38,10 +44,43 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
   }
 
   void defaultAddress() async {
-    List<Placemark> defaultPlace =
-        await placemarkFromCoordinates(-6.787360782866734, 39.27123535111817);
+    bool serviceEnabled;
+    LocationPermission permission;
 
-    Placemark placeMark = defaultPlace.first;
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    Position position = await Geolocator.getCurrentPosition();
+    CameraPosition currentLocation = CameraPosition(
+      target: LatLng(position.latitude, position.longitude),
+      zoom: 16.00,
+    );
+
+    final GoogleMapController controller = await mapcontroller.future;
+    controller.animateCamera(CameraUpdate.newCameraPosition(currentLocation));
+
+    // Place a marker at the current location
+    addMarker('currentLocation', LatLng(position.latitude, position.longitude));
+
+    // Optionally, update the address display based on the current location
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(position.latitude, position.longitude);
+    Placemark placeMark = placemarks.first;
     String street = placeMark.street!;
     String administrativeArea = placeMark.administrativeArea!;
     String postalCode = placeMark.postalCode!;
@@ -51,7 +90,32 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
     setState(() {
       _address = address;
       _addressToShow = address;
+      locationposition =
+          currentLocation; // Update the camera position to the current location
     });
+  }
+
+  List<dynamic> _suggestions = [];
+  Future<void> _fetchSuggestions(String input) async {
+    if (input.isEmpty) {
+      setState(() {
+        _suggestions = [];
+      });
+      return;
+    }
+    // Use your Google API Key
+    String baseUrl =
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+    String request = '$baseUrl?input=$input&key=$googleMapApiKey';
+
+    var response = await http.get(Uri.parse(request));
+    if (response.statusCode == 200) {
+      final predictions = json.decode(response.body)['predictions'];
+      print(predictions);
+      setState(() {
+        _suggestions = predictions;
+      });
+    }
   }
 
   @override
@@ -68,43 +132,62 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
           },
           icon: const Icon(
             Icons.arrow_back_ios,
-            color: whiteColor,
+            color: secondaryColor,
           ),
         ),
         titleSpacing: 0.0,
-        title: Container(
-          width: double.maxFinite,
-          margin: const EdgeInsets.only(right: fixPadding * 2.0),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: whiteColor,
-            borderRadius: BorderRadius.circular(10.0),
-            boxShadow: [
-              BoxShadow(
-                color: blackColor.withOpacity(0.15),
-                blurRadius: 8.0,
-              )
-            ],
+        title: TextField(
+          controller: searchController,
+          decoration: InputDecoration(
+            labelStyle: TextStyle(color: Colors.black),
+            hintText: 'Search Place...',
           ),
-          child: TextField(
-            style: semibold16Black33,
-            controller: searchController,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: fixPadding),
-              prefixIconConstraints:
-                  BoxConstraints(maxHeight: 45.0, minWidth: 35.0),
-              prefixIcon: Icon(CupertinoIcons.search),
-              hintText: "Search",
-              hintStyle: semibold16Grey,
-              isDense: true,
-            ),
-          ),
+          onChanged: _fetchSuggestions,
         ),
       ),
       body: Stack(
         children: [
           googleMap(),
+          Visibility(
+            visible: _suggestions.isNotEmpty,
+            child: Positioned(
+              left: 0,
+              right: 0,
+              height: 300,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                    vertical: 8), // Add some padding inside the container
+                decoration: BoxDecoration(
+                  color: Colors.white, // Background color
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: Offset(0, 3), // changes position of shadow
+                    ),
+                  ],
+                  borderRadius: BorderRadius.circular(10), // Rounded corners
+                ),
+                height: 100, // Adjust height as necessary
+                child: ListView.builder(
+                  itemCount: _suggestions.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      leading: Icon(Icons.location_on), // Add an icon
+                      title: Text(
+                        _suggestions[index]['description'],
+                        style: TextStyle(color: Colors.black), // Text style
+                      ),
+                      onTap: () {
+                        // Handle the suggestion selection
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
           addressAndPickLocationButton(),
         ],
       ),
@@ -192,56 +275,46 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
     );
   }
 
-  googleMap() {
+  Widget googleMap() {
     return GoogleMap(
       mapType: MapType.normal,
       initialCameraPosition: locationposition,
       onTap: (LatLng latLng) async {
-        const MarkerId markerId = MarkerId('yourLocation');
         final Marker marker = Marker(
-            markerId: markerId,
-            position: latLng,
-            icon: BitmapDescriptor.fromBytes(
-              await getBytesFromAsset("assets/pickLocation/marker.png", 80),
-            ));
+          markerId: const MarkerId('yourLocation'),
+          position: latLng,
+          icon: BitmapDescriptor.fromBytes(
+            await getBytesFromAsset("assets/pickLocation/marker.png", 80),
+          ),
+        );
 
-        var latitude;
-        var longitude;
-
-        markers.forEach((key, value) {
-          latitude = value.position.latitude;
-          longitude = value.position.longitude;
-        });
         List<Placemark> newPlace =
-            await placemarkFromCoordinates(latitude, longitude);
+            await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
+        print("Latitude: ${latLng.latitude}, Longitude: ${latLng.longitude}");
 
-        Placemark placeMark = newPlace[0];
-        String street = placeMark.street!;
-        String administrativeArea = placeMark.administrativeArea!;
-        String postalCode = placeMark.postalCode!;
-        String country = placeMark.country!;
+        Placemark placeMark = newPlace.first;
+        String street = placeMark.street ?? "";
+        String administrativeArea = placeMark.administrativeArea ?? "";
+        String postalCode = placeMark.postalCode ?? "";
+        String country = placeMark.country ?? "";
         String address = "$street, $administrativeArea $postalCode, $country";
 
         Map<String, dynamic> fullData = {
-          'address': '$address',
-          'lat': '$latitude',
-          'long': '$longitude',
+          'address': address,
+          'lat': latLng.latitude.toString(),
+          'long': latLng.longitude.toString(),
         };
 
         setState(() {
           _address = jsonEncode(fullData);
           _addressToShow = address;
           markers.clear();
-
-          markers["yourLocation"] = marker;
+          markers['yourLocation'] = marker;
         });
       },
       onMapCreated: (GoogleMapController controller) {
         mapcontroller.complete(controller);
-        addMarker(
-          'yourLocation',
-          const LatLng(-6.787360782866734, 39.27123535111817),
-        );
+        // Remove the hardcoded addMarker call here to avoid initial marker placement
       },
       markers: markers.values.toSet(),
     );

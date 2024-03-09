@@ -136,6 +136,11 @@ class MyApp extends StatelessWidget {
             child: const StartRideScreen(),
             type: PageTransitionType.rightToLeft,
             settings: settings);
+      case '/startRideRequester':
+        return PageTransition(
+            child: const StartRideRequesterScreen(),
+            type: PageTransitionType.rightToLeft,
+            settings: settings);
       case '/roadMap':
         return PageTransition(
             child: const RoadMapScreen(),

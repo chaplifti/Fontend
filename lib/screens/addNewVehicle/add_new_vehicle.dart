@@ -497,6 +497,8 @@ class _AddNewVehicleScreenState extends State<AddNewVehicleScreen> {
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
       final responseData = jsonDecode(response.body);
+      print(
+          "response.body----------------------------------------------------------------------------------------------------");
       String message = displayResponse(responseData);
       // print(response.body);
       if (response.statusCode == 201) {

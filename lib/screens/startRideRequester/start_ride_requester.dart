@@ -17,14 +17,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 
-class StartRideScreen extends StatefulWidget {
-  const StartRideScreen({super.key});
+class StartRideRequesterScreen extends StatefulWidget {
+  const StartRideRequesterScreen({super.key});
 
   @override
-  State<StartRideScreen> createState() => _StartRideScreenState();
+  State<StartRideRequesterScreen> createState() =>
+      _StartRideRequesterScreenState();
 }
 
-class _StartRideScreenState extends State<StartRideScreen> {
+class _StartRideRequesterScreenState extends State<StartRideRequesterScreen> {
   GoogleMapController? mapController;
 
   // static const CameraPosition currentPosition = CameraPosition(

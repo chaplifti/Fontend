@@ -42,6 +42,13 @@ dependencies:
   http:
   shared_preferences:
   image_picker:
+  flutter_google_places:
+  google_maps_webservice:
+  search_map_place_updated: ^0.0.4
+  geolocator: ^8.0.0
+  flutter_polyline_points:
+  cloud_firestore: ^4.15.7
+  firebase_database:
 
 dev_dependencies:
   flutter_test:

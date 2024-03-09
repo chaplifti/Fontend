@@ -68,6 +68,8 @@ class _FindRideScreenState extends State<FindRideScreen> {
 
       final responseData = jsonDecode(response.body);
 
+      print('Full Response Body: ${response.body}');
+
       List<dynamic> rides = responseData['rides'];
       List<Map<String, dynamic>> formattedRides = [];
 
@@ -75,6 +77,10 @@ class _FindRideScreenState extends State<FindRideScreen> {
         var firstName = ride['user']['first_name'];
         var lastName = ride['user']['last_name'];
         formattedRides.add({
+          "id": ride["id"],
+          "starting_point": ride["starting_point"],
+          "destination": ride["destination"],
+          "stop_points": ride["stop_points"],
           "pickupLocation": ride['starting_point_address'],
           "destinationLocation": ride['destination_address'],
           "price": ride['price'],
@@ -82,20 +88,16 @@ class _FindRideScreenState extends State<FindRideScreen> {
           "name": "$firstName $lastName",
           "dateTime": "25 June, 10:30am",
           "rate": 4.8,
-          "bookedSeat": 2,
+          "bookedSeat": 0,
           "vehicle": ride["vehicle"],
           "user": ride["user"],
-          "starting_point": ride["starting_point"],
-          "destination": ride["destination"],
+          "start_time": ride['start_time']
         });
       }
 
       setState(() {
         rideList = formattedRides;
       });
-
-      print(
-          "formattedRides------------------------------------------------------------$formattedRides");
     } catch (error) {
       // ignore: use_build_context_synchronously
       Navigator.pop(context);

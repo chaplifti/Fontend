@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import '../../constants/key.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MyRidesScreen extends StatefulWidget {
   const MyRidesScreen({super.key});
@@ -15,80 +17,7 @@ class MyRidesScreen extends StatefulWidget {
 }
 
 class _MyRidesScreenState extends State<MyRidesScreen> {
-  final ridesList = [
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Hemedi Kivuyo",
-      "date": "Today",
-      "time": "9:00 am",
-      "pickup": "Mbagala",
-      "destination": "Kariakoo"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Juma Msafiri",
-      "date": "22 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Mbagala",
-      "destination": "Mbezi"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Leslie Alexander",
-      "date": "23 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Dar es salaa",
-      "destination": "Morogoro"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Pamela Yuston",
-      "date": "24 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Kisesa",
-      "destination": "Kilosa"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Mtweve Karanda",
-      "date": "25 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Muheza",
-      "destination": "Chalinza"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Elia Mwabukusi",
-      "date": "25 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Chimala",
-      "destination": "Chunya"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Rweyemamu Rutashobya",
-      "date": "25 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Kamachumu",
-      "destination": "Mleba"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Bhoke Mkandara",
-      "date": "25 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Dodoma",
-      "destination": "Singida"
-    },
-    {
-      "image": "assets/myRides/download.jpg",
-      "name": "Amina Kilela",
-      "date": "25 jan 2023",
-      "time": "9:00 am",
-      "pickup": "Stesheni",
-      "destination": "Mbagala"
-    },
-  ];
+  List<Map<String, dynamic>> ridesList = [];
 
   @override
   Widget build(BuildContext context) {
@@ -142,10 +71,14 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
       physics: const BouncingScrollPhysics(),
       itemCount: ridesList.length,
       itemBuilder: (context, index) {
+        final ride = ridesList[index];
+        print(
+            "ridesList[index]--------------------------------------------------------$ride[");
+
         return GestureDetector(
           onTap: () async {
             final results = await Navigator.pushNamed(context, '/rideDetail',
-                arguments: {"id": 1});
+                arguments: {"id": ridesList[index]});
             if (results == "Cancel") {
               setState(() {
                 ridesList.removeAt(index);
@@ -168,26 +101,37 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  height: size.width * 0.2,
-                  width: size.width * 0.2,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5.0),
-                    image: DecorationImage(
-                      image: AssetImage(
-                        ridesList[index]['image'].toString(),
+                ride['user']['profile_picture'] != null
+                    ? Container(
+                        height: size.width * 0.2,
+                        width: size.width * 0.2,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(5.0),
+                          image: DecorationImage(
+                            image: NetworkImage(
+                                "$apiUrl/storage/$ride['user']['profile_picture']"),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      )
+                    : CircleAvatar(
+                        radius: size.width * 0.1,
+                        backgroundColor: primaryColor,
+                        child: Text(
+                          ride['user']['first_name'][0].toUpperCase(),
+                          style: TextStyle(
+                            fontSize: size.width * 0.1,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
                 widthSpace,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        ridesList[index]['name'].toString(),
+                        "${ride['user']['first_name']} ${ride['user']['last_name']}",
                         style: semibold15Black33,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -195,18 +139,17 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                       Row(
                         children: [
                           dateTimeWidget(size, Icons.calendar_month_outlined,
-                              ridesList[index]['date'].toString()),
+                              ride['start_time']),
                           const Text(
                             " | ",
                             style: medium12Black33,
                           ),
-                          dateTimeWidget(size, Icons.access_time,
-                              ridesList[index]['time'].toString()),
+                          dateTimeWidget(
+                              size, Icons.access_time, ride['status']),
                         ],
                       ),
                       height5Space,
-                      address(
-                          greenColor, ridesList[index]['pickup'].toString()),
+                      address(greenColor, ride['pickupLocation']),
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: fixPadding * 0.6),
@@ -218,8 +161,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                           child: const SizedBox(height: 6.0),
                         ),
                       ),
-                      address(
-                          redColor, ridesList[index]['destination'].toString()),
+                      address(redColor, ride['destinationLocation'].toString()),
                     ],
                   ),
                 )
@@ -323,5 +265,61 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchMyRide();
+  }
+
+  Future<void> fetchMyRide() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+
+      var url = Uri.parse('$apiUrl/api/user/rides');
+      var response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $savedAccessUserToken',
+          'Content-Type': 'application/json',
+        },
+      );
+      // print(response.body);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          ridesList = List<Map<String, dynamic>>.from(data['rides'].map((ride) {
+            var firstName = ride['user']['first_name'];
+            var lastName = ride['user']['last_name'];
+            return {
+              "id": ride['id'],
+              "pickupLocation": ride['starting_point_address'],
+              "destinationLocation": ride['destination_address'],
+              "start_time": ride['start_time'],
+              "price": ride['price'],
+              "available_seats": ride['available_seats'],
+              "occupied_seats": ride['occupied_seats'],
+              "status": ride['status'],
+              "user": ride['user'],
+              "vehicle": ride['vehicle'],
+              "starting_point": ride["starting_point"],
+              "stop_points": ride["stop_points"],
+              "destination": ride["destination"],
+              "name": "$firstName $lastName",
+              "rate": 4.8,
+              "bookedSeat": 0,
+              "dateTime": ride['start_time'],
+              "image": ride['profile_picture'],
+            };
+          }).toList());
+        });
+      } else {
+        throw Exception('Failed to load ride');
+      }
+    } catch (e) {
+      print(e.toString());
+    }
   }
 }

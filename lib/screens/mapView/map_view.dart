@@ -6,7 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:rc_fl_gopoolar/constants/key.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:geocoding/geocoding.dart';
 
 class MapViewScreen extends StatefulWidget {
   const MapViewScreen({super.key});
@@ -18,6 +22,8 @@ class MapViewScreen extends StatefulWidget {
 class _MapViewScreenState extends State<MapViewScreen> {
   GoogleMapController? mapController;
 
+  Map<String, dynamic>? rideData;
+
   static const CameraPosition currentPosition = CameraPosition(
     target: LatLng(-6.7920480427905, 39.2712279732554),
     zoom: 12.00,
@@ -26,39 +32,75 @@ class _MapViewScreenState extends State<MapViewScreen> {
   List<Marker> allMarkers = [];
   Map<PolylineId, Polyline> polylines = {};
 
-  final points = [
-    const LatLng(22.548208, 88.334758),
-    const LatLng(22.549476, 88.384917),
-    const LatLng(22.573889, 88.408965),
-    const LatLng(22.626187, 88.406218),
-  ];
+  PolylinePoints polylinePoints = PolylinePoints();
 
-  final markerPointList = [
-    {
-      "image": "assets/mapView/ride-start-icon.png",
-      "latLang": const LatLng(-6.7920480427905, 39.2712279732554)
-    },
-    {
-      "image": "assets/mapView/destinationicon.png",
-      "latLang": const LatLng(22.548476, 88.364917),
-    },
-    {
-      "image": "assets/mapView/ride-start-icon.png",
-      "latLang": const LatLng(22.571889, 88.405965),
-    },
-    {
-      "image": "assets/mapView/pickupicon.png",
-      "latLang": const LatLng(22.593889, 88.407565),
-    },
-    {
-      "image": "assets/mapView/ride-start-icon.png",
-      "latLang": const LatLng(22.626187, 88.406218),
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    addMarkers();
+  }
+
+  List<LatLng> pathPoints = [];
+  Future<Uint8List> getBytesFromAsset(String path, int width) async {
+    ByteData data = await rootBundle.load(path);
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+        targetWidth: width);
+    ui.FrameInfo fi = await codec.getNextFrame();
+    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
+        .buffer
+        .asUint8List();
+  }
+
+  Future<void> addMarkers() async {
+    final startMarkerIcon =
+        await getBytesFromAsset('assets/mapView/destinationicon.png', 100);
+    final destinationMarkerIcon =
+        await getBytesFromAsset('assets/mapView/pickupicon.png', 100);
+    final stopMarkerIcon =
+        await getBytesFromAsset('assets/mapView/grey-marker.png', 100);
+
+    // Assuming rideData is already loaded
+    LatLng origin = LatLng(rideData!['ride']['starting_point']['lng'],
+        rideData!['ride']['starting_point']['lat']);
+    LatLng destination = LatLng(rideData!['ride']['destination']['lng'],
+        rideData!['ride']['destination']['lat']);
+    List<dynamic> stopPoints = rideData!['ride']['stop_points'];
+
+    // Add Start Marker
+    allMarkers.add(Marker(
+      markerId: MarkerId("start_marker"),
+      position: origin,
+      icon: BitmapDescriptor.fromBytes(startMarkerIcon),
+    ));
+
+    // Add Destination Marker
+    allMarkers.add(Marker(
+      markerId: MarkerId("destination_marker"),
+      position: destination,
+      icon: BitmapDescriptor.fromBytes(destinationMarkerIcon),
+    ));
+
+    // Add Stop Point Markers
+    for (var i = 0; i < stopPoints.length; i++) {
+      allMarkers.add(Marker(
+        markerId: MarkerId("stop_marker_$i"),
+        position: LatLng(stopPoints[i]['lat'], stopPoints[i]['lng']),
+        icon: BitmapDescriptor.fromBytes(stopMarkerIcon),
+      ));
+    }
+
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+
+    rideData =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
+
+    print("rideData=-------------------------$rideData");
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -106,47 +148,72 @@ class _MapViewScreenState extends State<MapViewScreen> {
             maxChildSize: 0.55,
             minChildSize: 0.45,
             builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                decoration: const BoxDecoration(
-                  color: whiteColor,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(40.0),
-                  ),
-                ),
-                child: ListView(
-                  shrinkWrap: true,
-                  controller: scrollController,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(fixPadding * 2.0),
-                  children: [
-                    const Text(
-                      "Ride start on 25 june 2023",
-                      style: semibold16Black33,
-                    ),
-                    heightSpace,
-                    heightSpace,
-                    step("Ride start",
-                        "2715 Ash Dr. San Jose, South Dakota 83475"),
-                    step("Pick up point (10:00 am)",
-                        "2715 Ash Dr. San Jose, South Dakota 83475",
-                        isPickDropPoint: true,
-                        textColor: greenColor,
-                        iconColor: greenColor),
-                    step("Drive", "2715 Ash Dr. San Jose, South Dakota 83475"),
-                    step("Destination point (11:00 am)",
-                        "2715 Ash Dr. San Jose, South Dakota 83475",
-                        isPickDropPoint: true, textColor: redColor),
-                    step(
-                        "Ride end", "2715 Ash Dr. San Jose, South Dakota 83475",
-                        isDivider: false),
-                  ],
-                ),
+              return FutureBuilder<List<String>>(
+                future:
+                    _getStopPointsAddresses(rideData!['ride']['stop_points']),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return const Center(
+                        child: Text('Error fetching addresses'));
+                  } else {
+                    return Container(
+                      decoration: const BoxDecoration(
+                        color: whiteColor,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(40.0),
+                        ),
+                      ),
+                      child: ListView(
+                        shrinkWrap: true,
+                        controller: scrollController,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.all(fixPadding * 2.0),
+                        children: [
+                          Text(
+                            rideData!['ride']['start_time'],
+                            style: semibold16Black33,
+                          ),
+                          heightSpace,
+                          heightSpace,
+                          step("Start point (10:00 am)",
+                              rideData!['ride']['pickupLocation'],
+                              isPickDropPoint: true,
+                              textColor: greenColor,
+                              iconColor: greenColor),
+                          for (var address in snapshot.data!)
+                            step("Stop point", address,
+                                isPickDropPoint: true,
+                                iconColor: greyB4Color,
+                                textColor: greyB4Color),
+                          step("Destination point (11:00 am)",
+                              rideData!['ride']['destinationLocation'],
+                              isPickDropPoint: true, textColor: redColor),
+                        ],
+                      ),
+                    );
+                  }
+                },
               );
             },
           ),
         ),
       ),
     );
+  }
+
+  Future<List<String>> _getStopPointsAddresses(List<dynamic> stopPoints) async {
+    List<String> addresses = [];
+    for (var stopPoint in stopPoints) {
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(stopPoint['lat'], stopPoint['lng']);
+      Placemark placeMark = placemarks.first;
+      String address =
+          "${placeMark.street}, ${placeMark.administrativeArea} ${placeMark.postalCode}, ${placeMark.country}";
+      addresses.add(address);
+    }
+    return addresses;
   }
 
   step(String title, String subTitle,
@@ -229,48 +296,73 @@ class _MapViewScreenState extends State<MapViewScreen> {
     );
   }
 
-  static Future<Uint8List> getBytesFromAsset(String path, int width) async {
-    ByteData data = await rootBundle.load(path);
-    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
-        targetWidth: width);
-    ui.FrameInfo fi = await codec.getNextFrame();
-    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
-        .buffer
-        .asUint8List();
-  }
-
-  mapCreated(GoogleMapController controller) async {
+  void mapCreated(GoogleMapController controller) async {
     mapController = controller;
-    await marker();
-    await addPolyLine();
-    setState(() {});
-  }
-
-  marker() async {
-    for (int i = 0; i < markerPointList.length; i++) {
-      allMarkers.add(
-        Marker(
-          markerId: MarkerId(i.toString()),
-          position: markerPointList[i]['latLang'] as LatLng,
-          anchor: const Offset(0.4, 0.5),
-          icon: BitmapDescriptor.fromBytes(
-            await getBytesFromAsset(markerPointList[i]['image'].toString(), 70),
-          ),
-        ),
-      );
+    if (rideData != null) {
+      await addPolyLine(rideData!); // Make sure to check for null
+      setState(() {});
     }
   }
 
-  addPolyLine() {
-    PolylineId id = const PolylineId("poly");
-    Polyline polyline = Polyline(
-      polylineId: id,
-      color: primaryColor,
-      points: points,
-      width: 3,
+  Future<void> addPolyLine(Map<String, dynamic> ride) async {
+    List<LatLng> polylineCoordinates = [];
+    PolylineResult result;
+    List<dynamic> stopPoints = ride['ride']['stop_points'];
+
+    LatLng origin = LatLng(ride['ride']['starting_point']['lng'],
+        ride['ride']['starting_point']['lat']);
+    LatLng destination = LatLng(
+        ride['ride']['destination']['lng'], ride['ride']['destination']['lat']);
+
+    // Function to fetch and append polyline points
+    Future<void> fetchAndAppendPolyline(
+        LatLng origin, LatLng destination) async {
+      result = await polylinePoints.getRouteBetweenCoordinates(
+          googleMapApiKey, // Make sure you have a valid Google API Key
+          PointLatLng(origin.latitude, origin.longitude),
+          PointLatLng(destination.latitude, destination.longitude),
+          travelMode: TravelMode.driving);
+      if (result.points.isNotEmpty) {
+        result.points.forEach((PointLatLng point) {
+          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+        });
+      }
+    }
+
+    if (stopPoints.isNotEmpty) {
+      // Fetch polyline from start to first stop.
+      await fetchAndAppendPolyline(
+          origin, LatLng(stopPoints.first['lat'], stopPoints.first['lng']));
+
+      // Fetch polyline between stops.
+      for (int i = 0; i < stopPoints.length - 1; i++) {
+        LatLng stopOrigin = LatLng(stopPoints[i]['lat'], stopPoints[i]['lng']);
+        LatLng stopDestination =
+            LatLng(stopPoints[i + 1]['lat'], stopPoints[i + 1]['lng']);
+
+        await fetchAndAppendPolyline(stopOrigin, stopDestination);
+      }
+
+      // Fetch polyline from last stop to destination.
+      await fetchAndAppendPolyline(
+          LatLng(stopPoints.last['lat'], stopPoints.last['lng']), destination);
+    } else {
+      // If there are no stops, directly fetch polyline from start to end.
+      await fetchAndAppendPolyline(origin, destination);
+    }
+
+    // Create and set the polyline
+    final polylineId = PolylineId("route");
+    final polyline = Polyline(
+      polylineId: polylineId,
+      color: Colors.blue,
+      points: polylineCoordinates,
+      width: 5,
     );
-    polylines[id] = polyline;
-    setState(() {});
+
+    setState(() {
+      polylines[polylineId] = polyline;
+    });
   }
 
   @override

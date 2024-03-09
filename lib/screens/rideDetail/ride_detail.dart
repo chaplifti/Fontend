@@ -3,6 +3,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:rc_fl_gopoolar/widget/column_builder.dart';
+import '../../constants/key.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../utilis/dialog.dart';
+import '../../utilis/response.dart';
+import '../notification.dart';
 
 class RideDetailScreen extends StatefulWidget {
   const RideDetailScreen({super.key});
@@ -36,16 +43,133 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     },
   ];
 
+  // Future getLoactions() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   List<String>? pickupLocationList = prefs.getStringList('sourceLocation');
+  //   List<String>? destinationLocationList =
+  //       prefs.getStringList('destinationLocation');
+  // }
+
+  String? _userId;
+  int? _rideId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUser();
+  }
+
+  Future<void> _fetchUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? userDataString = prefs.getString('userData');
+    if (userDataString != null) {
+      final Map<String, dynamic> userData = jsonDecode(userDataString);
+      setState(() {
+        _userId = userData['id']
+            .toString(); // Assuming the user's ID is stored under 'id'
+      });
+    }
+  }
+
+  Future<void> _requestRide(int rideId) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+
+    List<String>? pickupLocationList = prefs.getStringList('sourceLocation');
+    if (pickupLocationList == null || pickupLocationList.isEmpty) {
+      Navigator.pop(context);
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return const NotificationDialog(
+            message: "Pickup location is not set.",
+            icon: Icons.error,
+            iconColor: Colors.red,
+          );
+        },
+      );
+    }
+    List<String>? destinationLocationList =
+        prefs.getStringList('destinationLocation');
+    if (destinationLocationList == null || destinationLocationList.isEmpty) {
+      Navigator.pop(context);
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return const NotificationDialog(
+            message: "Destination location is not set.",
+            icon: Icons.error,
+            iconColor: Colors.red,
+          );
+        },
+      );
+    }
+
+    var url = Uri.parse('$apiUrl/api/user/ride-requests/$rideId');
+    var response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $savedAccessUserToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'ride_id': rideId,
+        'pickup_location': {
+          "lat": pickupLocationList![1],
+          "lng": pickupLocationList[2]
+        },
+        'destination': {
+          "lat": destinationLocationList![1],
+          "lng": destinationLocationList[2]
+        },
+        'requested_seats': 1
+      }),
+    );
+    final responseData = jsonDecode(response.body);
+    try {
+      final responseData2 = jsonDecode(response.body);
+    } catch (e) {
+      print('Error decoding response: $e');
+    }
+
+    String message = displayResponse(responseData);
+    if (response.statusCode == 201) {
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return NotificationDialog(
+            message: message,
+            icon: Icons.check_circle,
+            iconColor: Colors.green,
+          );
+        },
+      );
+    } else {
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return NotificationDialog(
+            message: message,
+            icon: Icons.error,
+            iconColor: Colors.red,
+          );
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
     final data =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
-    final id = data['id'];
     final ride = data['id'];
-
-    print("ride-----------------------------------------------------$ride");
+    final String rideUserId = ride['user_id'].toString();
 
     return Scaffold(
       appBar: AppBar(
@@ -90,10 +214,11 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         padding: const EdgeInsets.all(fixPadding * 2.0),
         child: Row(
           children: [
-            id != 1
+            _userId != rideUserId
                 ? buttonWidget("Request ride", () {
-                    Navigator.pushNamed(context, '/success',
-                        arguments: {"id": 0});
+                    // Navigator.pushNamed(context, '/success',
+                    //     arguments: {"id": 0});
+                    _requestRide(ride['id']);
                   })
                 : cancelButton(),
             widthSpace,
@@ -644,18 +769,31 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       padding: const EdgeInsets.all(fixPadding * 2.0),
       child: Row(
         children: [
-          Container(
-            height: size.width * 0.21,
-            width: size.width * 0.21,
-            decoration: BoxDecoration(
-              color: whiteColor,
-              borderRadius: BorderRadius.circular(5.0),
-              image: const DecorationImage(
-                image: AssetImage("assets/rideDetail/rider-image.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+          ride['image'] != null
+              ? Container(
+                  height: size.width * 0.21,
+                  width: size.width * 0.21,
+                  decoration: BoxDecoration(
+                    color: whiteColor,
+                    borderRadius: BorderRadius.circular(5.0),
+                    image: DecorationImage(
+                      image: NetworkImage(
+                          "$apiUrl/storage/$ride['user']['driving_license']"),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )
+              : CircleAvatar(
+                  radius: size.width * 0.105,
+                  backgroundColor: primaryColor,
+                  child: Text(
+                    ride['name'] != null ? ride['name'][0] : '?',
+                    style: TextStyle(
+                      fontSize: size.width * 0.1,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
           widthSpace,
           Expanded(
             child: Column(
@@ -667,7 +805,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 height5Space,
-                Row(
+                const Row(
                   children: [
                     Text(
                       "4.8",

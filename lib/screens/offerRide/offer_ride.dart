@@ -129,6 +129,8 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
     final String? savedAccessUserToken = prefs.getString('AccessUserToken');
 
     List<String>? pickupLocationList = prefs.getStringList('sourceLocation');
+    List<String>? destinationLocationList =
+        prefs.getStringList('destinationLocation');
 
     List<String>? stopsJson = prefs.getStringList('stopPointsLocation');
     // Remove data for the 'counter' key.
@@ -153,8 +155,7 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
 
         transformedList.add(transformedStop);
       }
-      List<String>? destinationLocationList =
-          prefs.getStringList('destinationLocation');
+
       final String? dateAndTime = prefs.getString('dateAndTime');
       final String? noOfSeat = prefs.getString('noOfSeat');
       var date = convertDate(dateAndTime!);
