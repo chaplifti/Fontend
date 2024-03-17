@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic> stopPointsLocation = {};
 
   DateTime date = DateTime.now();
-  String _addressText = "Select location";
+  // String _addressText = "Select location";
 
   void addNewLocation() {
     setState(() {
@@ -895,7 +895,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final result = await Navigator.pushNamed(context, '/pickLocation');
         if (result != null && result is String) {
           String key = 'stopPointsLocation$locationCounter';
+
           Map<String, dynamic> locationData = jsonDecode(result);
+
           setState(() {
             stopPointsLocation[key] = locationData['address'];
           });
@@ -1314,24 +1316,24 @@ Future<void> addStopPointsLocation(String location, int id) async {
   print("Updated locations list: $data");
 }
 
-Future<void> deleteStopPointsLocation(int index) async {
-  final prefs = await SharedPreferences.getInstance();
+// Future<void> deleteStopPointsLocation(int index) async {
+//   final prefs = await SharedPreferences.getInstance();
 
-  // Retrieve the current list of locations from SharedPreferences
-  List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
+//   // Retrieve the current list of locations from SharedPreferences
+//   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
 
-  // Check if the index is within the range of the list to avoid RangeError
-  if (index >= 0 && index < locations.length) {
-    // Remove the item at the specified index
-    locations.removeAt(index);
-    // Save the updated list back to SharedPreferences
-    await prefs.setStringList('stopPointsLocation', locations);
+//   // Check if the index is within the range of the list to avoid RangeError
+//   if (index >= 0 && index < locations.length) {
+//     // Remove the item at the specified index
+//     locations.removeAt(index);
+//     // Save the updated list back to SharedPreferences
+//     await prefs.setStringList('stopPointsLocation', locations);
 
-    // Optional: Debugging print to confirm the operation
-    final List<String>? data = prefs.getStringList('stopPointsLocation');
-    print("Updated locations list after deletion: $data");
-  } else {
-    // Handle the case where the index is out of bounds
-    print("Index out of range: Cannot delete location at index $index");
-  }
-}
+//     // Optional: Debugging print to confirm the operation
+//     final List<String>? data = prefs.getStringList('stopPointsLocation');
+//     print("Updated locations list after deletion: $data");
+//   } else {
+//     // Handle the case where the index is out of bounds
+//     print("Index out of range: Cannot delete location at index $index");
+//   }
+// }

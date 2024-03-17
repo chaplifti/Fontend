@@ -1,15 +1,14 @@
-import 'dart:ffi';
+import 'dart:convert';
 
 import 'package:dotted_border/dotted_border.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:rc_fl_gopoolar/theme/theme.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import '../../constants/key.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
+import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+
+import '../../constants/key.dart';
 import '../../utilis/dialog.dart';
 import '../../utilis/response.dart';
 import '../notification.dart';
@@ -23,6 +22,7 @@ class RideRequestScreen extends StatefulWidget {
 
 class _RideRequestScreenState extends State<RideRequestScreen> {
   List<Map<String, dynamic>> ridesList = [];
+  bool _loading = true;
 
   final requestList = [
     {
@@ -76,8 +76,50 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           style: semibold18White,
         ),
       ),
-      body: rideListCotent(size),
+      body: ridesList.isEmpty ? emptyListContent() : rideListCotent(size),
     );
+  }
+
+  Widget emptyListContent() {
+    if (_loading) {
+      // Your existing code to show skeleton
+      return Skeletonizer(
+        enabled: _loading,
+        child: ListView.builder(
+          itemCount: 10,
+          itemBuilder: (context, index) {
+            return Card(
+              child: ListTile(
+                title: Text('Item number $index as title'),
+                subtitle: const Text('Subtitle here'),
+                trailing: const Icon(Icons.ac_unit),
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      // Show 'empty list' message when loading is done
+      return Center(
+        child: ListView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(fixPadding * 0.01),
+          shrinkWrap: true,
+          children: [
+            Image.asset(
+              "assets/myRides/no-car.png",
+              height: 50.0,
+            ),
+            heightSpace,
+            const Text(
+              "Empty Ridess list",
+              style: semibold16Black33,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   rideListCotent(size) {
@@ -131,43 +173,6 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                       verticalDivider(),
                       rideAddress(redColor,
                           ridesList[index]['destinationLocation'].toString()),
-                      height5Space,
-                      SingleChildScrollView(
-                        child: Row(
-                          children: List.generate(
-                            4,
-                            (i) => 3 > i
-                                ? Container(
-                                    height: 25.0,
-                                    width: 25.0,
-                                    margin: const EdgeInsets.only(right: 5.0),
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      image: DecorationImage(
-                                        image: AssetImage(
-                                          " passengerList[i].toString()",
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : Container(
-                                    height: 25.0,
-                                    width: 25.0,
-                                    margin: const EdgeInsets.only(right: 5.0),
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: d9E3EAColor,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: const Icon(
-                                      CupertinoIcons.person_fill,
-                                      color: whiteColor,
-                                      size: 18.0,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      )
                     ],
                   ),
                 ),
@@ -469,7 +474,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                 );
               }
               // By default, show a loading spinner or placeholder
-              return CircularProgressIndicator();
+              return const LinearProgressIndicator();
             },
           ),
         ),
@@ -510,6 +515,16 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   void initState() {
     super.initState();
     fetchMyRide();
+    _startLoadingTimer();
+  }
+
+  void _startLoadingTimer() async {
+    // Wait for 20 seconds
+    await Future.delayed(const Duration(seconds: 5));
+    // Then, set _loading to false to show the empty list message
+    setState(() {
+      _loading = false;
+    });
   }
 
   Future<void> fetchMyRide() async {
@@ -597,7 +612,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
         ).then((_) {
           // This code will be executed after the dialog is dismissed
           // Navigate to the new screen here
-          Navigator.pushNamed(context, '/myVehicle');
+          Navigator.pop;
         });
       } else {
         // ignore: use_build_context_synchronously
