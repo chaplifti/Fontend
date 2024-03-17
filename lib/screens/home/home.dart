@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/carbon.dart';
@@ -25,10 +27,17 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _lastName;
   String? _phoneNumber;
 
+  final Completer<GoogleMapController> _controller = Completer();
+  static const CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(0, 0), // Initial position
+    zoom: 0.0,
+  );
+
   @override
   void initState() {
     super.initState();
     _fetchValue();
+    _determinePosition();
   }
 
   Future<void> _fetchValue() async {
@@ -59,13 +68,50 @@ class _HomeScreenState extends State<HomeScreen> {
     'Saloon'
   ];
 
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled don't continue
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied, don't continue
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // When permissions are granted, continue accessing the position
+    Position position = await Geolocator.getCurrentPosition();
+    final GoogleMapController controller = await _controller.future;
+    CameraPosition currentPosition = CameraPosition(
+      target: LatLng(position.latitude, position.longitude),
+      zoom: 15.00,
+    );
+
+    controller.animateCamera(CameraUpdate.newCameraPosition(currentPosition));
+  }
+
   GoogleMapController? mapController;
 
   TextEditingController dateAndTimeController = TextEditingController();
   TextEditingController noOfSeatController = TextEditingController();
 
-  static const CameraPosition _currentPosition = CameraPosition(
-      target: LatLng(-6.886282370427649, 39.27507082065268), zoom: 11);
+  // static const CameraPosition _currentPosition = CameraPosition(
+  //     target: LatLng(-6.886282370427649, 39.27507082065268), zoom: 11);
 
   final tabList = ["Find ride", "Offer ride"];
 
@@ -88,14 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
       locationCounter++;
     });
   }
-
-  // void deleteLocation(int id) {
-  //   deleteStopPointsLocation(id);
-  //   setState(() {
-  //     pointsLocations.remove(id);
-  //     locationCounter--;
-  //   });
-  // }
 
   void deleteLocation(int key) async {
     final prefs = await SharedPreferences.getInstance();
@@ -855,17 +893,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.pushNamed(context, '/pickLocation');
-        final prefs = await SharedPreferences.getInstance();
         if (result != null && result is String) {
           String key = 'stopPointsLocation$locationCounter';
           Map<String, dynamic> locationData = jsonDecode(result);
           setState(() {
             stopPointsLocation[key] = locationData['address'];
           });
-          String stopPointsJson = jsonEncode(stopPointsLocation);
-          // await prefs.setString('stopPointsLocation', result);
-          // await prefs.setStringList('stopPointsLocation', <String>['Earth', 'Moon', 'Sun']);
-          // await prefs.remove('stopPointsLocation');
           addStopPointsLocation(result, locationCounter);
         }
       },
@@ -945,8 +978,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Map<String, dynamic> data = jsonDecode(result);
           await prefs.setStringList('sourceLocation',
               <String>[data['address'], data['lat'], data['long']]);
-
-          print("data1----------------------------------------$data");
 
           setState(() {
             sourceLocation = data['address'];
@@ -1159,9 +1190,10 @@ class _HomeScreenState extends State<HomeScreen> {
       width: size.width,
       child: GoogleMap(
         mapType: MapType.normal,
-        initialCameraPosition: _currentPosition,
-        onMapCreated: mapCreated,
-        zoomControlsEnabled: false,
+        initialCameraPosition: _initialPosition,
+        onMapCreated: (GoogleMapController controller) {
+          _controller.complete(controller);
+        },
       ),
     );
   }
@@ -1256,29 +1288,6 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 }
 
-// Future<void> addStopPointsLocation(String location, int index) async {
-//   final prefs = await SharedPreferences.getInstance();
-
-//   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
-
-//   locations.add(location);
-//   await prefs.setStringList('stopPointsLocation', locations);
-// }
-
-// Future<void> addStopPointsLocation(String location, int index) async {
-//   final prefs = await SharedPreferences.getInstance();
-//   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
-
-//   if (index >= 0 && index < locations.length) {
-//     locations[index] = location;
-//   } else {
-//     locations.add(location);
-//   }
-
-//   await prefs.setStringList('stopPointsLocation', locations);
-//   final List<String>? data = prefs.getStringList('stopPointsLocation');
-//   print("Updated locations list: $data");
-// }
 Future<void> addStopPointsLocation(String location, int id) async {
   final prefs = await SharedPreferences.getInstance();
   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
@@ -1304,19 +1313,6 @@ Future<void> addStopPointsLocation(String location, int id) async {
   final List<String>? data = prefs.getStringList('stopPointsLocation');
   print("Updated locations list: $data");
 }
-
-// Future<void> addStopPointsLocation(String location, int index) async {
-//   final prefs = await SharedPreferences.getInstance();
-//   List<String> locations = prefs.getStringList('stopPointsLocation') ?? [];
-
-//   if (index < locations.length) {
-//     locations[index] = location;
-//   } else {
-//     locations.add(location);
-//   }
-
-//   await prefs.setStringList('stopPointsLocation', locations);
-// }
 
 Future<void> deleteStopPointsLocation(int index) async {
   final prefs = await SharedPreferences.getInstance();

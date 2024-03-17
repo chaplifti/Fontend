@@ -4,17 +4,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:rc_fl_gopoolar/theme/theme.dart';
-import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:rc_fl_gopoolar/theme/theme.dart';
 
 import '../../constants/key.dart';
-import 'package:search_map_place_updated/search_map_place_updated.dart';
 
 class PickLocationScreen extends StatefulWidget {
   const PickLocationScreen({super.key});
@@ -106,7 +104,8 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
     // Use your Google API Key
     String baseUrl =
         'https://maps.googleapis.com/maps/api/place/autocomplete/json';
-    String request = '$baseUrl?input=$input&key=$googleMapApiKey';
+    String request =
+        '$baseUrl?input=$input&key=$googleMapApiKey&components=country:TZ';
 
     var response = await http.get(Uri.parse(request));
     if (response.statusCode == 200) {
@@ -136,13 +135,32 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
           ),
         ),
         titleSpacing: 0.0,
-        title: TextField(
-          controller: searchController,
-          decoration: InputDecoration(
-            labelStyle: TextStyle(color: Colors.black),
-            hintText: 'Search Place...',
+        title: Container(
+          decoration: BoxDecoration(
+            color: whiteColor,
+            borderRadius: BorderRadius.circular(10.0),
+            boxShadow: [
+              BoxShadow(
+                color: blackColor.withOpacity(0.1),
+                blurRadius: 12.0,
+                offset: const Offset(0, 6),
+              )
+            ],
           ),
-          onChanged: _fetchSuggestions,
+          child: TextField(
+            controller: searchController,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              labelStyle: TextStyle(color: Colors.black),
+              hintText: 'Search Place...',
+              hintStyle: semibold15Grey,
+              contentPadding: EdgeInsets.symmetric(
+                vertical: fixPadding * 1,
+                horizontal: fixPadding * 1,
+              ),
+            ),
+            onChanged: _fetchSuggestions,
+          ),
         ),
       ),
       body: Stack(
@@ -155,7 +173,7 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
               right: 0,
               height: 300,
               child: Container(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                     vertical: 8), // Add some padding inside the container
                 decoration: BoxDecoration(
                   color: Colors.white, // Background color
@@ -164,7 +182,7 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
                       color: Colors.grey.withOpacity(0.5),
                       spreadRadius: 5,
                       blurRadius: 7,
-                      offset: Offset(0, 3), // changes position of shadow
+                      offset: const Offset(0, 3), // changes position of shadow
                     ),
                   ],
                   borderRadius: BorderRadius.circular(10), // Rounded corners
@@ -173,15 +191,91 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
                 child: ListView.builder(
                   itemCount: _suggestions.length,
                   itemBuilder: (context, index) {
-                    return ListTile(
-                      leading: Icon(Icons.location_on), // Add an icon
-                      title: Text(
-                        _suggestions[index]['description'],
-                        style: TextStyle(color: Colors.black), // Text style
-                      ),
-                      onTap: () {
-                        // Handle the suggestion selection
-                      },
+                    return Column(
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 19.0,
+                              vertical: 0.00001), // Adjust padding as needed
+                          shape: const RoundedRectangleBorder(
+                            side: BorderSide(
+                                color: Colors.black,
+                                width: 1.0,
+                                style: BorderStyle.solid),
+                            borderRadius: BorderRadius.zero,
+                          ),
+
+                          leading: const Icon(Icons.location_on), // Add an icon
+                          title: Text(
+                            _suggestions[index]['description'],
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 14, // Adjust font size as needed
+                            ), // Text style
+                          ),
+                          onTap: () async {
+                            final String placeId =
+                                _suggestions[index]["place_id"];
+                            final String detailsUrl =
+                                'https://maps.googleapis.com/maps/api/place/details/json?placeid=$placeId&key=$googleMapApiKey';
+
+                            var response =
+                                await http.get(Uri.parse(detailsUrl));
+                            if (response.statusCode == 200) {
+                              final result = json.decode(response.body);
+                              final double lat = result['result']['geometry']
+                                  ['location']['lat'];
+                              final double lng = result['result']['geometry']
+                                  ['location']['lng'];
+
+                              LatLng selectedLocation = LatLng(lat, lng);
+
+                              // Similar to your googleMap() widget onTap functionality
+                              final Marker marker = Marker(
+                                markerId: const MarkerId('selectedLocation'),
+                                position: selectedLocation,
+                                icon: BitmapDescriptor.fromBytes(
+                                  await getBytesFromAsset(
+                                      "assets/pickLocation/marker.png", 80),
+                                ),
+                              );
+
+                              // List<Placemark> newPlace =
+                              //     await placemarkFromCoordinates(lat, lng);
+                              // Placemark placeMark = newPlace.first;
+                              // String address =
+                              //     "${placeMark.street}, ${placeMark.administrativeArea} ${placeMark.postalCode}, ${placeMark.country}";
+
+                              Map<String, dynamic> fullData = {
+                                'address': _suggestions[index]['description'],
+                                'lat': lat.toString(),
+                                'long': lng.toString(),
+                              };
+
+                              setState(() {
+                                _address = jsonEncode(fullData);
+                                _addressToShow =
+                                    _suggestions[index]['description'];
+                                locationposition = CameraPosition(
+                                    target: selectedLocation,
+                                    zoom:
+                                        16.00); // Update camera to new location
+                                markers.clear();
+                                markers['selectedLocation'] =
+                                    marker; // Update markers with new selected location
+                                _suggestions = [];
+                              });
+
+                              final GoogleMapController controller =
+                                  await mapcontroller.future;
+                              controller.animateCamera(
+                                  CameraUpdate.newCameraPosition(
+                                      locationposition));
+                            }
+                          },
+                        ),
+                        const Divider()
+                      ],
                     );
                   },
                 ),

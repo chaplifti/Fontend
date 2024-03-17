@@ -1,19 +1,93 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/mdi.dart';
+import 'package:intl/intl.dart';
+import 'package:rc_fl_gopoolar/constants/key.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
-
   @override
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
 class _WalletScreenState extends State<WalletScreen> {
   bool _isTextVisible = false;
+  String _balance = "*****";
+  bool _isLoading = false;
 
-  void _toggleTextVisibility() {
+  Future<void> _fetchBalance() async {
+    setState(() {
+      _isLoading = true; // Start loading
+    });
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+    var uri = Uri.parse('$apiUrl/api/user/wallet/total-balance');
+    var headers = {
+      'Authorization': 'Bearer $savedAccessUserToken',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    var response = await http.get(uri, headers: headers);
+    if (response.statusCode == 200) {
+      var data = jsonDecode(response.body);
+      // Check if the total_balance is not null and is a number or string that can be parsed
+      print(data['total_balance']);
+      double balance = 0;
+      if (data['total_balance'] != null) {
+        balance = double.tryParse(data['total_balance'].toString()) ?? 0;
+      }
+      final NumberFormat formatter = NumberFormat("#,##0.00", "en_US");
+      String formattedBalance = formatter.format(balance);
+      String fetchedBalance = "TZS $formattedBalance";
+      setState(() {
+        _balance = fetchedBalance;
+        _isLoading = false;
+      });
+    } else {
+      print('Failed to fetch balance');
+      setState(() {
+        _isLoading = false; // Stop loading
+      });
+    }
+  }
+
+  // Future<void> _fetchBalance() async {
+  //   final SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+  //   var uri = Uri.parse('$apiUrl/api/user/wallet/total-balance');
+  //   var headers = {
+  //     'Authorization': 'Bearer $savedAccessUserToken',
+  //     'Content-Type': 'application/json',
+  //     'Accept': 'application/json',
+  //   };
+  //   var response = await http.get(uri, headers: headers);
+  //   if (response.statusCode == 200) {
+  //     var data = jsonDecode(response.body);
+  //     // Check if the total_balance is not null and is a number or string that can be parsed
+  //     double balance = 0;
+  //     if (data['total_balance'] != null) {
+  //       balance = double.tryParse(data['total_balance'].toString()) ?? 0;
+  //     }
+  //     final NumberFormat formatter = NumberFormat("#,##0.00", "en_US");
+  //     String formattedBalance = formatter.format(balance);
+  //     String fetchedBalance = "TZS $formattedBalance";
+  //     setState(() {
+  //       _balance = fetchedBalance;
+  //     });
+  //   } else {
+  //     print('Failed to fetch balance');
+  //   }
+  // }
+
+  void _toggleTextVisibility() async {
+    if (!_isTextVisible) {
+      await _fetchBalance();
+    }
     setState(() {
       _isTextVisible = !_isTextVisible;
     });
@@ -72,10 +146,17 @@ class _WalletScreenState extends State<WalletScreen> {
       ),
       child: Column(
         children: [
-          Text(
-            _isTextVisible ? "TZS 100,500" : "*****",
-            style: medium30Primary,
-          ),
+          if (_isLoading) // Check if it is loading
+            const CircularProgressIndicator() // Show loading indicator
+          else
+            Text(
+              _isTextVisible ? _balance : "******",
+              style: medium30Primary,
+            ),
+          // Text(
+          //   _isTextVisible ? _balance : "******",
+          //   style: medium30Primary,
+          // ),
           ElevatedButton(
             onPressed: _toggleTextVisibility,
             child: Text(_isTextVisible ? 'Hide Balance' : 'Show Balance'),
@@ -100,13 +181,6 @@ class _WalletScreenState extends State<WalletScreen> {
             Navigator.pushNamed(context, '/addAndSendMoney',
                 arguments: {"id": 0});
           }),
-          /*heightSpace,
-          heightSpace,
-          optionWidget(Mdi.credit_card_outline, "Send  to bank",
-              "Easily send money in bank", () {
-            Navigator.pushNamed(context, '/addAndSendMoney',
-                arguments: {"id": 1});
-          }),*/
         ],
       ),
     );

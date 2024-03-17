@@ -9,6 +9,11 @@ import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:lottie/lottie.dart';
 import 'package:http/http.dart' as http;
 
+import '../../utilis/dialog.dart';
+import '../../utilis/response.dart';
+import '../notification.dart';
+import 'firebase.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -36,6 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> register(String firstName, String lastName, String email,
       String phoneNumber, String password, BuildContext context) async {
+    pleaseWaitDialog(context);
     try {
       final response = await http.post(
         Uri.parse(
@@ -51,20 +57,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       print(response.body);
 
+      final responseData = jsonDecode(response.body);
+      Navigator.pop(context);
+      String message = displayResponse(responseData);
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Assuming that 200 or 201 status code means registration success
-        final responseData = jsonDecode(response.body);
-
-        // You might want to print the response or handle it as per your requirement
-        print(responseData);
-
-        // After successful registration, you might want to navigate the user
-        // to a login page, or directly log them in, depending on your flow
-        Navigator.pushNamed(context, '/login'); // Example: Navigate to login
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return NotificationDialog(
+              message: message,
+              icon: Icons.check_circle,
+              iconColor: Colors.green,
+            );
+          },
+        ).then((_) {
+          Navigator.pushNamed(context, '/login'); // Example: Navigate to login
+        });
       } else {
         // Handle registration error
-        _showRegistrationFailedAlert(
-            context, "Registration failed. Please try again.");
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return NotificationDialog(
+              message: message,
+              icon: Icons.error,
+              iconColor: Colors.red,
+            );
+          },
+        );
       }
     } catch (error) {
       // Handle network or other errors

@@ -89,12 +89,12 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
     return Column(
       children: [
         Image.asset(
-          "assets/splash/poolar-logo.png",
+          "assets/splash/icon.jpeg",
           height: 80,
           color: secondaryColor,
         ),
         const Text(
-          "Go Poolar",
+          "ChapLifti",
           style: semibold24Secondary,
           textAlign: TextAlign.center,
         ),

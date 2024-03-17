@@ -72,8 +72,10 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
       itemCount: ridesList.length,
       itemBuilder: (context, index) {
         final ride = ridesList[index];
+        // final ride = ridesList[index]['ride_requests'];
+
         print(
-            "ridesList[index]--------------------------------------------------------$ride[");
+            "ridesList[index]--------------------------------------------------------$ride");
 
         return GestureDetector(
           onTap: () async {
@@ -312,6 +314,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
               "bookedSeat": 0,
               "dateTime": ride['start_time'],
               "image": ride['profile_picture'],
+              "ride_requests": ride['ride_requests']
             };
           }).toList());
         });

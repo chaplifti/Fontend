@@ -149,7 +149,7 @@ class CustomFirebaseAuthenticationService {
             );
           }
         } else {
-          Navigator.pushNamed(context, '/otp');
+          Navigator.pushNamed(context, '/otp', arguments: phone);
         }
         // print("Code sent");
         // Implement logic to handle the code being sent

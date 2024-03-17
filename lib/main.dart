@@ -96,11 +96,11 @@ class MyApp extends StatelessWidget {
             child: const ReviewScreen(),
             type: PageTransitionType.rightToLeft,
             settings: settings);
-      case '/messages':
-        return PageTransition(
-            child: const MessagesScreen(),
-            type: PageTransitionType.rightToLeft,
-            settings: settings);
+      // case '/messages':
+      //   return PageTransition(
+      //       child: const MessagesScreen(),
+      //       type: PageTransitionType.rightToLeft,
+      //       settings: settings);
       case '/success':
         return PageTransition(
             child: const SuccessScreen(),

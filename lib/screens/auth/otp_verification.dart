@@ -89,6 +89,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+
+    final phoneBumber = ModalRoute.of(context)?.settings.arguments;
     String strDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = strDigits(myDuration.inMinutes.remainder(60));
     final seconds = strDigits(myDuration.inSeconds.remainder(60));
@@ -103,7 +105,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               children: [
                 otpTitle(),
                 heightSpace,
-                confirmText(),
+                confirmText(phoneBumber.toString()),
                 heightSpace,
                 heightSpace,
                 heightSpace,
@@ -118,7 +120,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 verifyButton(),
                 heightSpace,
                 height5Space,
-                resendText()
+                resendText(phoneBumber.toString())
               ],
             ),
           )
@@ -144,7 +146,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     }
   }
 
-  resendText() {
+  resendText(String phone) {
     return Text.rich(
       TextSpan(
         text: "Didn’t receive code?",
@@ -159,6 +161,10 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 if (myDuration == const Duration(seconds: 0)) {
                   resetTimer();
                   startTimer();
+                  CustomFirebaseAuthenticationService.resetUser(
+                    phone,
+                    context: context,
+                  );
                 }
               },
           )
@@ -258,11 +264,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     );
   }
 
-  confirmText() {
-    return const Padding(
+  confirmText(String phone) {
+    return Padding(
       padding: EdgeInsets.symmetric(horizontal: fixPadding),
       child: Text(
-        "Confirmation code has been sent to you your mobile number +91 1234567890",
+        "Confirmation code has been sent to you your mobile number $phone",
         style: medium15Grey,
         textAlign: TextAlign.center,
       ),

@@ -171,6 +171,8 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     final ride = data['id'];
     final String rideUserId = ride['user_id'].toString();
 
+    print("ride--------------------------$ride");
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,

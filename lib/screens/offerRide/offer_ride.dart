@@ -185,9 +185,9 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
         'destination_address': destinationLocationList[0],
       });
 
-      final response = await http.post(uri, headers: headers, body: body);
+      // final response = await http.post(uri, headers: headers, body: body);
       // final responseData = jsonDecode(response.body);
-      print('Response body: ${response.body}');
+      // print('Response body: ${response.body}');
       try {
         final response = await http.post(uri, headers: headers, body: body);
         final responseData = jsonDecode(response.body);

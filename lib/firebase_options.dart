@@ -49,25 +49,28 @@ class DefaultFirebaseOptions {
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
     authDomain: 'chaplifti-65288.firebaseapp.com',
+    databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',
     storageBucket: 'chaplifti-65288.appspot.com',
     measurementId: 'G-YYTWGQM9B8',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAdhGb0MRKoyZb8GX4CmcuAvf34-v2oCxk',
-    appId: '1:895226357293:android:b3a9ee003a428ff4bcbaa4',
+    appId: '1:895226357293:android:fd58e1d76f472f06bcbaa4',
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
+    databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',
     storageBucket: 'chaplifti-65288.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCIfLdDEdDiOnAa5DxA215R6jAJg8wEFW4',
-    appId: '1:895226357293:ios:55f3565f04bec849bcbaa4',
+    appId: '1:895226357293:ios:ba9a76eb1bc9e642bcbaa4',
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
+    databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',
     storageBucket: 'chaplifti-65288.appspot.com',
-    iosBundleId: 'com.example.rcFlGopoolar',
+    iosBundleId: 'com.chaplifti.chaplifti',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -75,6 +78,7 @@ class DefaultFirebaseOptions {
     appId: '1:895226357293:ios:f3d7230ad41587f7bcbaa4',
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
+    databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',
     storageBucket: 'chaplifti-65288.appspot.com',
     iosBundleId: 'com.example.rcFlGopoolar.RunnerTests',
   );

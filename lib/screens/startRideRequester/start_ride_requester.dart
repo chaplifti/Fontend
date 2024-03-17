@@ -16,6 +16,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'dart:math' as math;
 
 class StartRideRequesterScreen extends StatefulWidget {
   const StartRideRequesterScreen({super.key});
@@ -53,7 +54,6 @@ class _StartRideRequesterScreenState extends State<StartRideRequesterScreen> {
   }
 
   void _updateInitialCameraPosition() async {
-    print("rideData------------------------------------------$rideData");
     if (rideData != null) {
       LatLng sourceLocation = LatLng(
         rideData!['starting_point']['lng'],
@@ -85,7 +85,8 @@ class _StartRideRequesterScreenState extends State<StartRideRequesterScreen> {
       });
 
       // Update driver's location in Firestore
-      _updateDriverLocationInFirestore(position.latitude, position.longitude);
+      _updateRequesterLocationInFirestore(
+          position.latitude, position.longitude);
     });
   }
 
@@ -107,68 +108,145 @@ class _StartRideRequesterScreenState extends State<StartRideRequesterScreen> {
     });
   }
 
-  // void _updateDriverLocationInFirestore(double lat, double lng) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   int driverId = prefs.getString('userData') != null
-  //       ? jsonDecode(prefs.getString('userData')!)['id']
-  //       : null;
-
-  //   int rideId = rideData!['id'];
-
-  //   DatabaseReference databaseReference =
-  //       FirebaseDatabase.instance.ref().child('rides');
-
-  //   databaseReference.push().set({
-  //     'driver_id': driverId,
-  //     'ride_id': rideId,
-  //     'driver_location': {'lat': lat, 'lng': lng},
-  //     'requester_loaction': []
-  //   });
-  // }
-
-  void _updateDriverLocationInFirestore(double lat, double lng) async {
+  void _updateRequesterLocationInFirestore(double lat, double lng) async {
     final prefs = await SharedPreferences.getInstance();
-    final driverId = prefs.getString('userData') != null
-        ? jsonDecode(prefs.getString('userData')!)['id']
-        : null;
-    final rideId = rideData!['id'];
+    final String? userPrefsData = prefs.getString('userData');
+    final userId =
+        userPrefsData != null ? jsonDecode(userPrefsData)['id'] : null;
+    final rideId = rideData?['id'];
+    final user_Id = rideData?['user_id'];
 
-    // Combined key
-    String combinedKey = "$driverId-$rideId";
+    if (userId == null || rideId == null || user_Id == null) {
+      print("No user ID or ride ID found.");
+      return;
+    }
+
+    // Use a combined key of userID and rideID to ensure uniqueness
+    String combinedKey = "$user_Id-$rideId";
 
     DatabaseReference databaseReference =
         FirebaseDatabase.instance.ref().child('rides').child(combinedKey);
 
-    // First, get the current location from the database
+    // Check if there's an entry for this unique combined key in the database
     DataSnapshot snapshot = await databaseReference.get();
 
-    if (snapshot.exists) {
+    if (snapshot.exists && snapshot.value != null) {
       Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
-      Map<dynamic, dynamic> currentLocation =
-          data['driver_location'] as Map<dynamic, dynamic>;
+      List<dynamic> requesterLocations = data.containsKey('requester_location')
+          ? List.from(data['requester_location'])
+          : [];
 
-      // Check if the lat and lng have changed
-      if (currentLocation['lat'] != lat || currentLocation['lng'] != lng) {
-        // Lat or Lng have changed, update the location
-        databaseReference.update({
-          'driver_id': driverId,
-          'ride_id': rideId,
-          'driver_location': {'lat': lat, 'lng': lng},
-          'requester_location': [] // Assuming an initial value is needed
-        });
+      Map<String, dynamic>? driverLocationCurrent =
+          data['driver_location_current'] != null
+              ? Map<String, dynamic>.from(data['driver_location_current'])
+              : null;
+      Map<String, dynamic>? driverLocationPrevious =
+          data['driver_location_previous'] != null
+              ? Map<String, dynamic>.from(data['driver_location_previous'])
+              : null;
+
+      // Try to find existing requester entry by userId
+      int index = requesterLocations.indexWhere(
+          (element) => element['user_id'].toString() == userId.toString());
+
+      if (driverLocationCurrent != null && driverLocationPrevious != null) {
+        _updateDriverLocationMarker(
+          driverLocationCurrent['lat'],
+          driverLocationCurrent['lng'],
+          driverLocationPrevious['lat'],
+          driverLocationPrevious['lng'],
+        );
+      }
+
+      if (index != -1) {
+        // Existing location entry found for this user, update if changed
+        if (requesterLocations[index]['location']['lat'] != lat ||
+            requesterLocations[index]['location']['lng'] != lng) {
+          requesterLocations[index]['location'] = {'lat': lat, 'lng': lng};
+          databaseReference.update({'requester_location': requesterLocations});
+          print("Location updated.");
+        } else {
+          print("Location is the same, not updating.");
+        }
       } else {
-        // Lat and Lng have not changed, no need to update
-        print("Location is the same, not updating.");
+        // No location entry for this user, add a new one
+        requesterLocations.add({
+          'user_id': userId,
+          'ride_id': rideId,
+          'location': {'lat': lat, 'lng': lng},
+        });
+        databaseReference.update({'requester_location': requesterLocations});
+        print("New location added.");
       }
     } else {
-      // Record does not exist, set it
+      // No record exists for this unique key, create a new one with the requester's location
       databaseReference.set({
-        'driver_id': driverId,
-        'ride_id': rideId,
-        'driver_location': {'lat': lat, 'lng': lng},
-        'requester_location': [] // Assuming an initial value is needed
+        'requester_location': [
+          {
+            'user_id': userId,
+            'ride_id': rideId,
+            'location': {'lat': lat, 'lng': lng},
+          }
+        ]
       });
+      print("New ride and location created.");
     }
+  }
+
+  // void _updateDriverLocationMarker(double lat, double lng) {
+  //   final driverLocationMarker = Marker(
+  //     markerId: const MarkerId("driver_location"),
+  //     position: LatLng(lat, lng),
+  //     icon: BitmapDescriptor.defaultMarkerWithHue(
+  //         BitmapDescriptor.hueRed), // or a custom car icon
+  //   );
+
+  //   setState(() {
+  //     // Remove old driver location marker
+  //     allMarkers.removeWhere(
+  //         (marker) => marker.markerId == const MarkerId("driver_location"));
+  //     // Add new driver location marker
+  //     allMarkers.add(driverLocationMarker);
+  //   });
+  // }
+
+  void _updateDriverLocationMarker(double currentLat, double currentLng,
+      double prevLat, double prevLng) async {
+    final Uint8List markerIcon =
+        await getBytesFromAsset('assets/mapView/car.png', 100);
+
+    final driverLocationMarker = Marker(
+      markerId: const MarkerId("driver_location"),
+      position: LatLng(currentLat, currentLng),
+      icon: BitmapDescriptor.fromBytes(markerIcon), // Custom car icon
+      rotation: _getRotation(currentLat, currentLng, prevLat,
+          prevLng), // Optional: Calculate rotation based on direction
+    );
+
+    setState(() {
+      // Remove old driver location marker
+      allMarkers.removeWhere(
+          (marker) => marker.markerId == const MarkerId("driver_location"));
+      // Add new driver location marker
+      allMarkers.add(driverLocationMarker);
+    });
+
+    // Optional: Animate camera to the new driver position
+    if (mapController != null) {
+      mapController!.animateCamera(
+          CameraUpdate.newLatLng(LatLng(currentLat, currentLng)));
+    }
+  }
+
+  double _getRotation(
+      double currentLat, double currentLng, double prevLat, double prevLng) {
+    var deltaLng = currentLng - prevLng;
+    var y = math.sin(deltaLng) * math.cos(currentLat);
+    var x = math.cos(prevLat) * math.sin(currentLat) -
+        math.sin(prevLat) * math.cos(currentLat) * math.cos(deltaLng);
+    var bearing = math.atan2(y, x);
+    return (bearing * (180 / math.pi) + 360) %
+        360; // Convert to degrees and normalize
   }
 
   List<LatLng> pathPoints = [];
@@ -229,8 +307,6 @@ class _StartRideRequesterScreenState extends State<StartRideRequesterScreen> {
     rideData =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
 
-    print({rideData!['id']});
-
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -249,7 +325,7 @@ class _StartRideRequesterScreenState extends State<StartRideRequesterScreen> {
           ),
         ),
         title: const Text(
-          "Ride request",
+          "Requester Ride Dashboard",
           style: semibold18White,
         ),
       ),
@@ -275,9 +351,9 @@ class _StartRideRequesterScreenState extends State<StartRideRequesterScreen> {
           curve: Curves.easeIn,
           delay: const Duration(milliseconds: 350),
           child: DraggableScrollableSheet(
-            initialChildSize: 0.5,
+            initialChildSize: 0.3,
             maxChildSize: 0.9,
-            minChildSize: 0.5,
+            minChildSize: 0.2,
             builder: (BuildContext context, ScrollController scrollController) {
               return Container(
                 decoration: const BoxDecoration(

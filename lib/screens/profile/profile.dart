@@ -64,6 +64,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           profileOptions(context),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // Add your onPressed code here!
+        },
+        backgroundColor: Colors.indigo,
+        label: const Text(
+          'Get Help',
+          style: TextStyle(color: Colors.white),
+        ),
+        icon: const Icon(
+          Icons.emoji_people,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 
@@ -76,6 +90,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: const EdgeInsets.all(fixPadding * 2.0),
           physics: const BouncingScrollPhysics(),
           children: [
+            iconProfileOption(
+                CupertinoIcons.text_bubble, "Chat", "Chats History", () {
+              Navigator.pushNamed(context, '/chatslist');
+            }),
+            divider(),
             imageProfileOption("assets/profile/car-line.png", "My vehicle",
                 "Add vehicle information", () {
               Navigator.pushNamed(context, '/myVehicle');
@@ -116,6 +135,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
+  // chats() {
+  //   return ListView(
+  //     children: const [],
+  //   );
+  // }
 
   logoutDialog() {
     return showDialog(

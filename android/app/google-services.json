@@ -1,15 +1,16 @@
 {
   "project_info": {
     "project_number": "895226357293",
+    "firebase_url": "https://chaplifti-65288-default-rtdb.firebaseio.com",
     "project_id": "chaplifti-65288",
     "storage_bucket": "chaplifti-65288.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:895226357293:android:b3a9ee003a428ff4bcbaa4",
+        "mobilesdk_app_id": "1:895226357293:android:d4c78f94715f1e02bcbaa4",
         "android_client_info": {
-          "package_name": "com.example.rc_fl_gopoolar"
+          "package_name": "com.chaplifti.chaplifti"
         }
       },
       "oauth_client": [],
