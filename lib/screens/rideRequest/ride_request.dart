@@ -221,20 +221,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
 
   requestBottomSheet(size, int ride_index) {
     // int requestIndex = ridesList[ride_index]['ride_requests'].length;
-    if (ride_index >= ridesList.length) {
-      print("Error: rideIndex ($ride_index) is out of bounds.");
-      return;
-    }
-
-    List<dynamic>? rideRequests =
-        ridesList[ride_index]['ride_requests'] as List<dynamic>?;
-    // Map<String, dynamic>? rideRequests =
-    //     ridesList[ride_index]['ride_requests'] as Map<String, dynamic>?;
-
-    if (rideRequests == null || rideRequests.isEmpty) {
-      print("No ride requests available for this ride.");
-      return;
-    }
+    Map<String, dynamic>? rideRequests =
+        ridesList[ride_index]['ride_requests'] as Map<String, dynamic>?;
 
     return showModalBottomSheet(
       backgroundColor: whiteColor,

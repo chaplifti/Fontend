@@ -1329,11 +1329,11 @@ Future<void> addStopPointsLocation(String location, int id) async {
 //     // Save the updated list back to SharedPreferences
 //     await prefs.setStringList('stopPointsLocation', locations);
 
-//     // Optional: Debugging print to confirm the operation
-//     final List<String>? data = prefs.getStringList('stopPointsLocation');
-//     print("Updated locations list after deletion: $data");
-//   } else {
-//     // Handle the case where the index is out of bounds
-//     print("Index out of range: Cannot delete location at index $index");
-//   }
-// }
+    // Optional: Debugging print to confirm the operation
+    final List<String>? data = prefs.getStringList('stopPointsLocation');
+    print("Updated locations list after deletion: $data");
+  } else {
+    // Handle the case where the index is out of bounds
+    print("Index out of range: Cannot delete location at index $index");
+  }
+}
