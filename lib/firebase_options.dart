@@ -45,18 +45,18 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCXMKX3wKUykx1x4EaMA3X7vBLiSE0quDw',
-    appId: '1:895226357293:web:2a799c2658ead410bcbaa4',
+    appId: '1:895226357293:web:4bb02ca196d52de5bcbaa4',
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
     authDomain: 'chaplifti-65288.firebaseapp.com',
     databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',
     storageBucket: 'chaplifti-65288.appspot.com',
-    measurementId: 'G-YYTWGQM9B8',
+    measurementId: 'G-J7BL9BR9GM',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAdhGb0MRKoyZb8GX4CmcuAvf34-v2oCxk',
-    appId: '1:895226357293:android:fd58e1d76f472f06bcbaa4',
+    appId: '1:895226357293:android:d4c78f94715f1e02bcbaa4',
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
     databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',
@@ -65,7 +65,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCIfLdDEdDiOnAa5DxA215R6jAJg8wEFW4',
-    appId: '1:895226357293:ios:ba9a76eb1bc9e642bcbaa4',
+    appId: '1:895226357293:ios:977689f398cc704fbcbaa4',
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
     databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',
@@ -75,7 +75,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyCIfLdDEdDiOnAa5DxA215R6jAJg8wEFW4',
-    appId: '1:895226357293:ios:f3d7230ad41587f7bcbaa4',
+    appId: '1:895226357293:ios:c8622e86c2857978bcbaa4',
     messagingSenderId: '895226357293',
     projectId: 'chaplifti-65288',
     databaseURL: 'https://chaplifti-65288-default-rtdb.firebaseio.com',

@@ -1,16 +1,15 @@
 import 'dart:convert';
-import 'dart:io';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:rc_fl_gopoolar/theme/theme.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import '../../constants/key.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
+import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
-import '../../utilis/dialog.dart';
+import '../../constants/key.dart';
 import '../notification.dart';
 
 class MyRequestScreen extends StatefulWidget {
@@ -22,6 +21,24 @@ class MyRequestScreen extends StatefulWidget {
 
 class _MyRequestScreenState extends State<MyRequestScreen> {
   List<Map<String, dynamic>> requestList = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initiate a delayed task
+    fetchMyRequest();
+    _startLoadingTimer();
+  }
+
+  void _startLoadingTimer() async {
+    // Wait for 20 seconds
+    await Future.delayed(const Duration(seconds: 5));
+    // Then, set _loading to false to show the empty list message
+    setState(() {
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,26 +63,46 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
     );
   }
 
-  emptyListContent() {
-    return Center(
-      child: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(fixPadding * 0.01),
-        shrinkWrap: true,
-        children: [
-          Image.asset(
-            "assets/myRides/no-car.png",
-            height: 50.0,
-          ),
-          heightSpace,
-          const Text(
-            "Empty Request list",
-            style: semibold16Black33,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+  Widget emptyListContent() {
+    if (_loading) {
+      // Your existing code to show skeleton
+      return Skeletonizer(
+        enabled: _loading,
+        child: ListView.builder(
+          itemCount: 10,
+          itemBuilder: (context, index) {
+            return Card(
+              child: ListTile(
+                title: Text('Item number $index as title'),
+                subtitle: const Text('Subtitle here'),
+                trailing: const Icon(Icons.ac_unit),
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      // Show 'empty list' message when loading is done
+      return Center(
+        child: ListView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(fixPadding * 0.01),
+          shrinkWrap: true,
+          children: [
+            Image.asset(
+              "assets/myRides/no-car.png",
+              height: 50.0,
+            ),
+            heightSpace,
+            const Text(
+              "Empty Request list",
+              style: semibold16Black33,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   requestListContent(Size size) {
@@ -91,12 +128,12 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
                 },
               );
             } else {
-              var rideDetails =
-                  await fetchRideDetails(requestList[index]['ride_id']);
-              if (rideDetails.isNotEmpty) {
-                await Navigator.pushNamed(context, '/startRideRequester',
-                    arguments: rideDetails);
-              }
+              // var rideDetails =
+              //     await fetchRideDetails(requestList[index]['id']);
+              // if (rideDetails != null) {
+              //   await Navigator.pushNamed(context, '/startRideRequester',
+              //       arguments: {"rideDetails": rideDetails});
+              // }
               // if (results == "Cancel") {
               //   setState(() {
               //     requestList.removeAt(index);
@@ -149,7 +186,7 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         "Request",
                         style: semibold15Black33,
                         overflow: TextOverflow.ellipsis,
@@ -286,11 +323,11 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchMyRequest();
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //
+  // }
 
   Future<void> fetchMyRequest() async {
     try {
@@ -305,8 +342,6 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
           'Content-Type': 'application/json',
         },
       );
-
-      print(response.body);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -335,7 +370,6 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
 
           return {
             "id": request['id'],
-            "user_id": request['user_id'],
             "ride_id": request['ride_id'],
             "pickupLocation": formattedPickupLocation,
             "destinationLocation": formattedDestinationLocation,
@@ -355,12 +389,72 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
     }
   }
 
-  // Future<void> requestVadidation() async {
+  Future<void> requestVadidation() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? savedAccessUserToken = prefs.getString('AccessUserToken');
+
+      var url = Uri.parse('$apiUrl/api/user/ride-requests');
+      var response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $savedAccessUserToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        print(data['ride_requests']);
+        var requests = data['ride_requests'] as List<dynamic>;
+
+        // Use Future.wait to resolve all futures generated by the map operation.
+        var futureRequests = await Future.wait(requests.map((request) async {
+          List<Placemark> pickupPlacemarks = await placemarkFromCoordinates(
+            request['pickup_location']['lng'],
+            request['pickup_location']['lat'],
+          );
+          var pickupLocation = pickupPlacemarks.first;
+          String formattedPickupLocation =
+              "${pickupLocation.street}, ${pickupLocation.administrativeArea} ${pickupLocation.postalCode}, ${pickupLocation.country}";
+
+          List<Placemark> destinationPlacemarks =
+              await placemarkFromCoordinates(
+            request['destination']['lng'],
+            request['destination']['lat'],
+          );
+          var destinationLocation = destinationPlacemarks.first;
+          String formattedDestinationLocation =
+              "${destinationLocation.street}, ${destinationLocation.administrativeArea} ${destinationLocation.postalCode}, ${destinationLocation.country}";
+
+          return {
+            "id": request['id'],
+            "ride_id": request['ride_id'],
+            "pickupLocation": formattedPickupLocation,
+            "destinationLocation": formattedDestinationLocation,
+            "requested_seats": request['requested_seats'],
+            "status": request['status'],
+          };
+        }));
+
+        setState(() {
+          requestList = List<Map<String, dynamic>>.from(futureRequests);
+        });
+      } else {
+        throw Exception('Failed to load requests');
+      }
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+
+  // Future<Map<String, dynamic>> fetchRideDetails(String rideId) async {
   //   try {
   //     final SharedPreferences prefs = await SharedPreferences.getInstance();
   //     final String? savedAccessUserToken = prefs.getString('AccessUserToken');
 
-  //     var url = Uri.parse('$apiUrl/api/user/ride-requests');
+  //     var url = Uri.parse('$apiUrl/api/user/rides/$rideId');
   //     var response = await http.get(
   //       url,
   //       headers: {
@@ -370,99 +464,13 @@ class _MyRequestScreenState extends State<MyRequestScreen> {
   //     );
 
   //     if (response.statusCode == 200) {
-  //       final data = jsonDecode(response.body);
-
-  //       print(data['ride_requests']);
-  //       var requests = data['ride_requests'] as List<dynamic>;
-
-  //       // Use Future.wait to resolve all futures generated by the map operation.
-  //       var futureRequests = await Future.wait(requests.map((request) async {
-  //         List<Placemark> pickupPlacemarks = await placemarkFromCoordinates(
-  //           request['pickup_location']['lng'],
-  //           request['pickup_location']['lat'],
-  //         );
-  //         var pickupLocation = pickupPlacemarks.first;
-  //         String formattedPickupLocation =
-  //             "${pickupLocation.street}, ${pickupLocation.administrativeArea} ${pickupLocation.postalCode}, ${pickupLocation.country}";
-
-  //         List<Placemark> destinationPlacemarks =
-  //             await placemarkFromCoordinates(
-  //           request['destination']['lng'],
-  //           request['destination']['lat'],
-  //         );
-  //         var destinationLocation = destinationPlacemarks.first;
-  //         String formattedDestinationLocation =
-  //             "${destinationLocation.street}, ${destinationLocation.administrativeArea} ${destinationLocation.postalCode}, ${destinationLocation.country}";
-
-  //         return {
-  //           "id": request['id'],
-  //           "ride_id": request['ride_id'],
-  //           "pickupLocation": formattedPickupLocation,
-  //           "destinationLocation": formattedDestinationLocation,
-  //           "requested_seats": request['requested_seats'],
-  //           "status": request['status'],
-  //         };
-  //       }));
-
-  //       setState(() {
-  //         requestList = List<Map<String, dynamic>>.from(futureRequests);
-  //       });
+  //       return jsonDecode(response.body);
   //     } else {
-  //       throw Exception('Failed to load requests');
+  //       throw Exception('Failed to load ride details');
   //     }
   //   } catch (e) {
   //     print(e.toString());
+  //     return false;
   //   }
   // }
-
-  Future<Map<String, dynamic>> fetchRideDetails(int rideId) async {
-    pleaseWaitDialog(context);
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? savedAccessUserToken = prefs.getString('AccessUserToken');
-
-    var url = Uri.parse('$apiUrl/api/user/rides/$rideId');
-    var response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $savedAccessUserToken',
-        'Content-Type': 'application/json',
-      },
-    );
-    print(response.body);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      print(data);
-
-      // Assuming `data` is structured similarly to the ride detail you expect.
-      final ride = data['ride'];
-      final firstName = ride['user']['first_name'];
-      final lastName = ride['user']['last_name'];
-
-      return {
-        "id": ride['id'],
-        "user_id": ride['user_id'],
-        "pickupLocation": ride['starting_point_address'],
-        "destinationLocation": ride['destination_address'],
-        "start_time": ride['start_time'],
-        "price": ride['price'],
-        "available_seats": ride['available_seats'],
-        "occupied_seats": ride['occupied_seats'],
-        "status": ride['status'],
-        "user": ride['user'],
-        "vehicle": ride['vehicle'],
-        "starting_point": ride["starting_point"],
-        "stop_points": ride["stop_points"],
-        "destination": ride["destination"],
-        "name": "$firstName $lastName",
-        "rate": 4.8,
-        "bookedSeat": 0,
-        "dateTime": ride['start_time'],
-        "image": ride['profile_picture'],
-        "seat": ride['available_seats'],
-        "ride_requests": ride['ride_requests']
-      };
-    } else {
-      throw Exception('Failed to load ride details');
-    }
-  }
 }

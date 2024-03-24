@@ -83,19 +83,22 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   Widget emptyListContent() {
     if (_loading) {
       // Your existing code to show skeleton
-      return Skeletonizer(
-        enabled: _loading,
-        child: ListView.builder(
-          itemCount: 10,
-          itemBuilder: (context, index) {
-            return Card(
-              child: ListTile(
-                title: Text('Item number $index as title'),
-                subtitle: const Text('Subtitle here'),
-                trailing: const Icon(Icons.ac_unit),
-              ),
-            );
-          },
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Skeletonizer(
+          enabled: _loading,
+          child: ListView.builder(
+            itemCount: 10,
+            itemBuilder: (context, index) {
+              return Card(
+                child: ListTile(
+                  title: Text('Item number $index as title'),
+                  subtitle: const Text('Subtitle here'),
+                  trailing: const Icon(Icons.ac_unit),
+                ),
+              );
+            },
+          ),
         ),
       );
     } else {
@@ -132,7 +135,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
         final passengerList = ridesList[index];
         return GestureDetector(
           onTap: () {
-            print(ridesList[index]);
+            //print('Ride indexxxx --------------  ${ridesList[index]}');
             Navigator.pushNamed(context, '/startRide',
                 arguments: passengerList);
           },
@@ -189,6 +192,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   requestButton(size, int index) {
     return GestureDetector(
       onTap: () {
+        print('Print $index');
         requestBottomSheet(size, index);
       },
       child: Container(
@@ -217,8 +221,20 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
 
   requestBottomSheet(size, int ride_index) {
     // int requestIndex = ridesList[ride_index]['ride_requests'].length;
+    if (ride_index >= ridesList.length) {
+      print("Error: rideIndex ($ride_index) is out of bounds.");
+      return;
+    }
+
     List<dynamic>? rideRequests =
         ridesList[ride_index]['ride_requests'] as List<dynamic>?;
+    // Map<String, dynamic>? rideRequests =
+    //     ridesList[ride_index]['ride_requests'] as Map<String, dynamic>?;
+
+    if (rideRequests == null || rideRequests.isEmpty) {
+      print("No ride requests available for this ride.");
+      return;
+    }
 
     return showModalBottomSheet(
       backgroundColor: whiteColor,
@@ -237,10 +253,9 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           shrinkWrap: true,
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(fixPadding * 2.0),
-          itemCount: rideRequests?.length ?? 0,
+          itemCount: rideRequests.length ?? 0,
           itemBuilder: (context, index) {
-            Map<String, dynamic>? user =
-                rideRequests![index]['user'] as Map<String, dynamic>?;
+            Map<String, dynamic>? user = rideRequests[index]['user'];
             String profilePicture = user?['profile_picture'] ?? '';
 
             String firstName = user?['first_name'] ?? '';

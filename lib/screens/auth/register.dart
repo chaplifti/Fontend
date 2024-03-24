@@ -2,17 +2,16 @@
 
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:rc_fl_gopoolar/constants/key.dart';
-import 'package:rc_fl_gopoolar/theme/theme.dart';
-import 'package:lottie/lottie.dart';
 import 'package:http/http.dart' as http;
-
-import '../../utilis/dialog.dart';
-import '../../utilis/response.dart';
-import '../notification.dart';
-import 'firebase.dart';
+import 'package:lottie/lottie.dart';
+import 'package:rc_fl_gopoolar/constants/key.dart';
+import 'package:rc_fl_gopoolar/screens/notification.dart';
+import 'package:rc_fl_gopoolar/theme/theme.dart';
+import 'package:rc_fl_gopoolar/utilis/response.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -39,57 +38,187 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  // Future<void> register(String firstName, String lastName, String email,
+  //     String phoneNumber, String password, BuildContext context) async {
+  //   pleaseWaitDialog(context);
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse(
+  //           '$apiUrl/api/register'), // Adjusted to the registration endpoint
+  //       body: {
+  //         'first_name': _firstNameController.text,
+  //         'last_name': _lastNameController.text,
+  //         'email': _emailController.text,
+  //         'phone_number': _mobileNumberController.text,
+  //         'password': _passwordController.text,
+  //         'password_confirmation': _passwordController.text,
+  //       },
+  //     );
+  //     print(response.body);
+  //
+  //     final responseData = jsonDecode(response.body);
+  //     Navigator.pop(context);
+  //     String message = displayResponse(responseData);
+  //
+  //     if (response.statusCode == 200 || response.statusCode == 201) {
+  //       showDialog(
+  //         context: context,
+  //         builder: (BuildContext context) {
+  //           return NotificationDialog(
+  //             message: message,
+  //             icon: Icons.check_circle,
+  //             iconColor: Colors.green,
+  //           );
+  //         },
+  //       ).then((_) {
+  //         Navigator.pushNamed(context, '/login'); // Example: Navigate to login
+  //       });
+  //     } else {
+  //       // Handle registration error
+  //       showDialog(
+  //         context: context,
+  //         builder: (BuildContext context) {
+  //           return NotificationDialog(
+  //             message: message,
+  //             icon: Icons.error,
+  //             iconColor: Colors.red,
+  //           );
+  //         },
+  //       );
+  //     }
+  //   } catch (error) {
+  //     // Handle network or other errors
+  //     _showRegistrationFailedAlert(context, "An error occurred: $error");
+  //   }
+  // }
+
+  // Future<void> register(String firstName, String lastName, String email,
+  //     String phoneNumber, String password, BuildContext context) async {
+  //   // Save user data to SharedPreferences
+  //
+  //   if (phoneNumber.startsWith('0')) {
+  //     // Remove the first character (0)
+  //     phoneNumber = phoneNumber.substring(1);
+  //     // Add "255" at the beginning
+  //     phoneNumber = '+255$phoneNumber';
+  //   }
+  //   print('number--------------$phoneNumber');
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.setString('firstName', firstName);
+  //   await prefs.setString('lastName', lastName);
+  //   await prefs.setString('email', email);
+  //   await prefs.setString('phoneNumber', phoneNumber);
+  //   await prefs.setString('password', password);
+  //
+  //   // Validate phone number using Firebase
+  //   try {
+  //     await FirebaseAuth.instance.verifyPhoneNumber(
+  //       phoneNumber: phoneNumber,
+  //       verificationCompleted: (PhoneAuthCredential credential) async {
+  //         // Sign in the user with the credential
+  //         await FirebaseAuth.instance.signInWithCredential(credential);
+  //         // Navigate to the forgot password screen
+  //         Navigator.pushNamed(context, '/otp-new');
+  //       },
+  //       verificationFailed: (FirebaseAuthException e) {
+  //         // Handle phone number verification failure
+  //         print('Phone number verification failed: ${e.message}');
+  //       },
+  //       codeSent: (String verificationId, int? resendToken) {
+  //         // Save verification ID to SharedPreferences
+  //         prefs.setString('verificationId', verificationId);
+  //         // Navigate to OTP verification screen
+  //         Navigator.pushNamed(context, '/otp_verification',
+  //             arguments: phoneNumber);
+  //       },
+  //       codeAutoRetrievalTimeout: (String verificationId) {
+  //         // Handle code auto retrieval timeout
+  //         print('Code auto retrieval timeout: $verificationId');
+  //       },
+  //     );
+  //   } catch (e) {
+  //     print('Error occurred during phone number verification: $e');
+  //   }
+  // }
+
   Future<void> register(String firstName, String lastName, String email,
       String phoneNumber, String password, BuildContext context) async {
-    pleaseWaitDialog(context);
+    // Save user data to SharedPreferences
+    if (phoneNumber.startsWith('0')) {
+      // Remove the first character (0)
+      phoneNumber = phoneNumber.substring(1);
+      // Add "255" at the beginning
+      phoneNumber = '+255$phoneNumber';
+    }
+    print('number--------------$phoneNumber');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('firstName', firstName);
+    await prefs.setString('lastName', lastName);
+    await prefs.setString('email', email);
+    await prefs.setString('phoneNumber', phoneNumber);
+    await prefs.setString('password', password);
+
+    // Validate phone number using Firebase
     try {
-      final response = await http.post(
-        Uri.parse(
-            '$apiUrl/api/register'), // Adjusted to the registration endpoint
-        body: {
-          'first_name': _firstNameController.text,
-          'last_name': _lastNameController.text,
-          'email': _emailController.text,
-          'phone_number': _mobileNumberController.text,
-          'password': _passwordController.text,
-          'password_confirmation': _passwordController.text,
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          try {
+            // Save user data to the API
+            final response = await http.post(
+              Uri.parse(
+                  '$apiUrl/api/register'), // Adjusted to the registration endpoint
+              body: {
+                'first_name': firstName,
+                'last_name': lastName,
+                'email': email,
+                'phone_number': phoneNumber,
+                'password': password,
+                'password_confirmation': password,
+              },
+            );
+
+            if (response.statusCode == 200 || response.statusCode == 201) {
+              // Registration successful, navigate to OTP screen
+              Navigator.pushNamed(context, '/otp-new');
+            } else {
+              // Handle registration error
+              final responseData = jsonDecode(response.body);
+              String message = displayResponse(responseData);
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return NotificationDialog(
+                    message: message,
+                    icon: Icons.error,
+                    iconColor: Colors.red,
+                  );
+                },
+              );
+            }
+          } catch (error) {
+            // Handle network or other errors
+            _showRegistrationFailedAlert(context, "An error occurred: $error");
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          // Handle phone number verification failure
+          print('Phone number verification failed: ${e.message}');
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          // Save verification ID to SharedPreferences
+          prefs.setString('verificationId', verificationId);
+          // Navigate to OTP verification screen
+          Navigator.pushNamed(context, '/otp_verification',
+              arguments: phoneNumber);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          // Handle code auto retrieval timeout
+          print('Code auto retrieval timeout: $verificationId');
         },
       );
-      print(response.body);
-
-      final responseData = jsonDecode(response.body);
-      Navigator.pop(context);
-      String message = displayResponse(responseData);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return NotificationDialog(
-              message: message,
-              icon: Icons.check_circle,
-              iconColor: Colors.green,
-            );
-          },
-        ).then((_) {
-          Navigator.pushNamed(context, '/login'); // Example: Navigate to login
-        });
-      } else {
-        // Handle registration error
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return NotificationDialog(
-              message: message,
-              icon: Icons.error,
-              iconColor: Colors.red,
-            );
-          },
-        );
-      }
-    } catch (error) {
-      // Handle network or other errors
-      _showRegistrationFailedAlert(context, "An error occurred: $error");
+    } catch (e) {
+      print('Error occurred during phone number verification: $e');
     }
   }
 

@@ -1,10 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:rc_fl_gopoolar/screens/auth/forgot_password.dart';
+import 'package:rc_fl_gopoolar/screens/auth/otp_verification_new_user.dart';
 import 'package:rc_fl_gopoolar/screens/screens.dart';
 import 'package:rc_fl_gopoolar/theme/theme.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
@@ -64,6 +65,11 @@ class MyApp extends StatelessWidget {
       case '/otp':
         return PageTransition(
             child: const OTPVerificationScreen(),
+            type: PageTransitionType.rightToLeft,
+            settings: settings);
+      case '/otp-new':
+        return PageTransition(
+            child: const OTPVerificationNewUserScreen(),
             type: PageTransitionType.rightToLeft,
             settings: settings);
       case '/bottomBar':

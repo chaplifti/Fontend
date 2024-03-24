@@ -1,13 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import '../../constants/key.dart';
+import 'package:rc_fl_gopoolar/theme/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// import 'package:http_parser/http_parser.dart';
+import '../../constants/key.dart';
 
 class MyRidesScreen extends StatefulWidget {
   const MyRidesScreen({super.key});
@@ -74,8 +75,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
         final ride = ridesList[index];
         // final ride = ridesList[index]['ride_requests'];
 
-        print(
-            "ridesList[index]--------------------------------------------------------$ride");
+        print("ridesList[index]-------------------------------$ride");
 
         return GestureDetector(
           onTap: () async {
